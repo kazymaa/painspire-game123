@@ -379,7 +379,6 @@ async function dbLoad() {
       var d = res.data;
       if (d.pain != null)   G.pain = d.pain;
       if (d.lvl)            G.lvl = d.lvl;
-      if (d.energy != null) G.energy = d.energy;
       if (d.username)       G.username = d.username;
       if (d.streak)         G.streak = d.streak;
       if (d.last_claim)     G.lastClaim = d.last_claim;
@@ -387,6 +386,20 @@ async function dbLoad() {
       try { G.pUpgs = JSON.parse(d.passive_upgs||'{}'); } catch(e){}
       try { G.lUpgs = JSON.parse(d.lvl_upgs||'{}'); } catch(e){}
       try { G.tUpgs = JSON.parse(d.tap_upgs||'{}'); } catch(e){}
+      // Restore energy: calc how much regenerated while offline
+      var savedEnergy = d.energy != null ? d.energy : MAX_E;
+      var savedAt = d.updated_at ? new Date(d.updated_at).getTime() : Date.now();
+      var offlineSec = Math.floor((Date.now() - savedAt) / 1000);
+      var regenMs = (G.pUpgs['p3']||0)>=1 ? REGEN_MS/2 : REGEN_MS;
+      var regenAmt = (G.pUpgs['p4']||0)>=1 ? REGEN_AMT*2 : REGEN_AMT;
+      var regenTicks = Math.floor(offlineSec / (regenMs/1000));
+      var restoredEnergy = Math.min(MAX_E, savedEnergy + regenTicks * regenAmt);
+      G.energy = restoredEnergy;
+      if (offlineSec > 10 && restoredEnergy > savedEnergy) {
+        setTimeout(function(){
+          toast('Поки тебе не було: +' + (restoredEnergy - savedEnergy) + ' енергії ⚡');
+        }, 1500);
+      }
     }
   } catch(e) { console.log('load:', e); }
 }
@@ -395,15 +408,21 @@ async function dbSave() {
   if (!G.tgId) return;
   try {
     await sb.from('players').upsert({
-      tg_id: G.tgId, username: G.username,
-      pain: G.pain, lvl: G.lvl, cpc: G.cpc, aps: G.aps,
-      energy: G.energy, streak: G.streak, last_claim: G.lastClaim,
+      tg_id: G.tgId,
+      username: G.username,
+      pain: G.pain,
+      lvl: G.lvl,
+      cpc: G.cpc,
+      aps: G.aps,
+      energy: G.energy,
+      streak: G.streak,
+      last_claim: G.lastClaim,
       claimed_rewards: JSON.stringify(G.claimedR),
       passive_upgs: JSON.stringify(G.pUpgs),
       lvl_upgs: JSON.stringify(G.lUpgs),
       tap_upgs: JSON.stringify(G.tUpgs),
       updated_at: new Date().toISOString()
-    }, {onConflict:'tg_id'});
+    }, {onConflict: 'tg_id'});
   } catch(e) { console.log('save:', e); }
 }
 
@@ -708,13 +727,16 @@ function buildLvlBonuses(){
 function buyTap(id){
   var u=TAP_UPGRADES.find(function(x){return x.id===id;});if(!u||G.tUpgs[id]||G.lvl<u.lvlReq)return;
   var cost=u.cost(0);if(G.pain<cost){toast('Мало болю!');return;}
-  G.pain-=cost;G.tUpgs[id]=true;recalc();buildTapUpgrades();updateHUD();vibrate(25);toast('+1 до тапу! Тепер +'+G.cpc);
+  G.pain-=cost;G.tUpgs[id]=true;recalc();buildTapUpgrades();updateHUD();vibrate(25);
+  toast('+1 до тапу! Тепер +'+G.cpc);
+  dbSave();
 }
 function buyP(id){
   var u=PASSIVE.find(function(x){return x.id===id;});if(!u)return;
   var lv=G.pUpgs[id]||0;if(lv>=u.max)return;
   var cost=u.cost(lv);if(G.pain<cost){toast('Мало болю!');return;}
   G.pain-=cost;G.pUpgs[id]=lv+1;recalc();buildPassive();updateHUD();vibrate(15);
+  dbSave();
 }
 
 // ══ REWARDS ══
@@ -850,7 +872,13 @@ btnEl.addEventListener('click',function(e){if(!e.sourceCapabilities||!e.sourceCa
 
 // ══ TIMERS ══
 setInterval(function(){if(G.aps>0){G.pain+=G.aps;recalc();updateHUD();}},1000);
-setInterval(function(){dbSave();},20000);
+setInterval(function(){dbSave();},10000);
+// Save when user leaves/hides the app
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='hidden') dbSave();
+});
+window.addEventListener('beforeunload', function(){ dbSave(); });
+window.addEventListener('pagehide', function(){ dbSave(); });
 
 // ══ INIT ══
 async function init(){
