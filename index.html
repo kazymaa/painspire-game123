@@ -400,6 +400,22 @@ async function dbLoad() {
           toast('Поки тебе не було: +' + (restoredEnergy - savedEnergy) + ' енергії ⚡');
         }, 1500);
       }
+      // Also restore auto-click income while offline (capped at 4 hours)
+      if(G.aps > 0 && offlineSec > 0) {
+        var maxOffline = 4 * 3600; // max 4 hours offline income
+        var offlineIncome = Math.min(offlineSec, maxOffline) * G.aps;
+        if(offlineIncome > 0) {
+          G.pain += offlineIncome;
+          // recalc level based on new pain
+          G.lvl = calcLvl(G.pain);
+          setTimeout(function(){
+            toast('Поки тебе не було: +' + fmt(offlineIncome) + ' болю 🩸');
+          }, 2000);
+        }
+      } else {
+        // Still recalc level from pain
+        G.lvl = calcLvl(G.pain);
+      }
     }
   } catch(e) { console.log('load:', e); }
 }
@@ -458,6 +474,28 @@ async function buildLB() {
 
 // ══ UTILS ══
 function fmt(n){if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1000)return(n/1000).toFixed(1)+'K';return Math.round(n)+'';}
+
+// Calculate level from total pain (pain never resets)
+// Each level costs level*1000, cumulative:
+// Lvl 1: 0-999, Lvl 2: 1000-2999, Lvl 3: 3000-5999...
+function calcLvl(totalPain) {
+  var lvl = 1;
+  var threshold = 0;
+  while(true) {
+    threshold += lvl * 1000;
+    if(totalPain < threshold) break;
+    lvl++;
+    if(lvl >= 100) break; // safety cap
+  }
+  return lvl;
+}
+
+function painForLvl(lvl) {
+  // total pain needed to reach this level
+  var total = 0;
+  for(var i=1;i<lvl;i++) total += i*1000;
+  return total;
+}
 
 function recalc() {
   // base cpc = 1 + tap upgrades bought
@@ -534,14 +572,17 @@ function checkAC(){
 
 // ══ HUD ══
 function updateHUD(){
-  var needed=G.lvl*1000,prog=G.pain%needed;
+  var lvlStart=painForLvl(G.lvl);
+  var lvlEnd=painForLvl(G.lvl+1);
+  var prog=G.pain-lvlStart;
+  var needed=lvlEnd-lvlStart;
   document.getElementById('pain-val').textContent=fmt(G.pain);
   document.getElementById('cpc-val').textContent='+'+G.cpc;
   document.getElementById('aps-val').textContent=G.aps;
   document.getElementById('lvl-val').textContent=G.lvl;
   document.getElementById('lvl-badge').textContent='УР. '+G.lvl+' · '+NAMES[Math.min(G.lvl-1,NAMES.length-1)];
   document.getElementById('next-lbl').textContent=fmt(needed-prog)+' до наступного рівня';
-  document.getElementById('xpbar').style.width=(prog/needed*100)+'%';
+  document.getElementById('xpbar').style.width=Math.min(100,(prog/needed*100))+'%';
   updateEnergyUI();
   var ico=document.getElementById('profile-ico');ico.textContent=G.username.slice(0,2).toUpperCase();ico.style.fontSize='13px';
   var btn=document.getElementById('btn-bleed');
@@ -557,11 +598,13 @@ function bleed(e){
   var gained=G.cpc;
   G.pain+=gained;
   G.energy=Math.max(0,G.energy-E_PER_TAP);
-  // Level up — НЕ скидає pain, просто підвищує рівень
-  while(G.pain>=G.lvl*1000){
-    G.pain-=G.lvl*1000;
-    G.lvl++;
-    showLvlUp();
+  // Level up — pain НЕ скидається, рівень росте разом з болем
+  var newLvl = calcLvl(G.pain);
+  if(newLvl > G.lvl){
+    for(var li=G.lvl+1;li<=newLvl;li++){
+      G.lvl=li;
+      showLvlUp();
+    }
     vibrate([30,12,30,12,50]);
   }
   recalc();
@@ -891,6 +934,8 @@ async function init(){
       if(u&&u.id){G.tgId=u.id;G.username=u.first_name||u.username||'Гравець';await dbLoad();}
     }
   }catch(e){console.log('init:',e);}
+  // Make sure level matches pain after loading
+  G.lvl = Math.max(G.lvl, calcLvl(G.pain));
   recalc();startRegen();updateHUD();
   document.getElementById('loading').style.display='none';
 }
