@@ -334,8 +334,8 @@ var TAP_UPGRADES = [
 
 // Пасивна прокачка
 var PASSIVE = [
-  {id:"p1",name:"Автоклікер",desc:"Авто +1 біль/сек без витрати енергії",max:20,cost:function(l){return Math.round(800*Math.pow(1.7,l))},eff:function(l){return l+" авто/сек"}},
-  {id:"p2",name:"Кровавая аура",desc:"x2 до болю за кожен тап",max:1,cost:function(l){return 500000},eff:function(l){return l?"x2 тап активно":"Вимк"}},
+  {id:"p1",name:"Автоклікер",desc:"Авто біль/сек без витрати енергії (макс 10/сек). Працює 4 год потім треба перезапустити.",max:10,cost:function(l){return Math.round(1000*Math.pow(1.8,l))},eff:function(l){return l+" авто/сек"}},
+  {id:"p2",name:"Кривава аура",desc:"x2 до автоклікера",max:1,cost:function(l){return 500000},eff:function(l){return l?"x2 авто активно":"Вимк"}},
   {id:"p3",name:"Швидка регенерація",desc:"Енергія відновлюється вдвічі швидше",max:1,cost:function(l){return 50000},eff:function(l){return l?"Активно":"Вимк"}},
   {id:"p4",name:"Подвійна регенерація",desc:"+4 енергії замість +2 за тік",max:1,cost:function(l){return 200000},eff:function(l){return l?"Активно":"Вимк"}}
 ];
@@ -365,7 +365,11 @@ var G = {
   streak:0, lastClaim:null,
   claimedR:[], pUpgs:{}, lUpgs:{}, tUpgs:{},
   taps:[], warnCount:0, blockedUntil:0,
-  vibrationOn: true
+  vibrationOn: true,
+  effectsOn: true,
+  shakeOn: true,
+  autoClickStarted: 0,  // timestamp when autoclick was started
+  autoClickActive: false
 };
 
 // ══ SUPABASE ══
@@ -404,13 +408,18 @@ async function dbLoad() {
           toast('Поки тебе не було: +' + (restoredEnergy - savedEnergy) + ' енергії ⚡');
         }, 1500);
       }
-      // Also restore auto-click income while offline (capped at 4 hours)
-      if(G.aps > 0 && offlineSec > 0) {
-        var maxOffline = 4 * 3600; // max 4 hours offline income
-        var offlineIncome = Math.min(offlineSec, maxOffline) * G.aps;
+      // Restore autoclick state - check if 4h timer still running
+      if(d.auto_click_started) {
+        G.autoClickStarted = d.auto_click_started;
+        var autoElapsed = Date.now() - G.autoClickStarted;
+        G.autoClickActive = autoElapsed < AUTO_DURATION;
+      }
+      // Restore auto-click income while offline (only if autoclick was active)
+      if(G.aps > 0 && offlineSec > 0 && G.autoClickActive) {
+        var autoElapsedSec = Math.min(offlineSec, 4*3600);
+        var offlineIncome = autoElapsedSec * G.aps;
         if(offlineIncome > 0) {
           G.pain += offlineIncome;
-          // Level up from offline income
           while(G.pain >= G.nextLvlAt) {
             G.nextLvlAt += (G.lvl+1)*1000;
             G.lvl++;
@@ -442,6 +451,7 @@ async function dbSave() {
       passive_upgs: JSON.stringify(G.pUpgs),
       lvl_upgs: JSON.stringify(G.lUpgs),
       tap_upgs: JSON.stringify(G.tUpgs),
+      auto_click_started: G.autoClickStarted || 0,
       updated_at: new Date().toISOString()
     }, {onConflict: 'tg_id'});
   } catch(e) { console.log('save:', e); }
@@ -499,12 +509,11 @@ function recalc() {
   // base cpc = 1 + tap upgrades bought (max 5 taps)
   var tapBonus = 0;
   TAP_UPGRADES.forEach(function(u){ if(G.tUpgs[u.id]) tapBonus += u.bonus; });
-  var baseCpc = 1 + tapBonus;
-  // Кровавая аура = x2 multiplier
+  G.cpc = 1 + tapBonus;
+  // auto clicker: p1 level, x2 if Кривава аура
+  var autoBase = G.pUpgs['p1'] || 0;
   var auraMult = (G.pUpgs['p2']||0) >= 1 ? 2 : 1;
-  G.cpc = baseCpc * auraMult;
-  // auto clicker (p1 only, no auto-mult from p2 anymore)
-  G.aps = G.pUpgs['p1'] || 0;
+  G.aps = autoBase * auraMult;
 }
 
 function vibrate(p) {
@@ -618,6 +627,7 @@ function bleed(e){
 function spawnRipple(){var b=document.getElementById('btn-bleed');var r=document.createElement('div');r.className='ripple-ring';b.appendChild(r);setTimeout(function(){if(r.parentNode)r.remove();},680);}
 
 function spawnDrips(e){
+  if(!G.effectsOn) return;
   var app=document.getElementById('app'),rect=app.getBoundingClientRect();
   var cx=e?(e.touches?e.touches[0].clientX:e.clientX)-rect.left:180;
   var cy=e?(e.touches?e.touches[0].clientY:e.clientY)-rect.top:400;
@@ -706,6 +716,7 @@ function shakeBtn(){
 }
 
 function shakeScreen(){
+  if(!G.shakeOn) return;
   var app=document.getElementById('app');
   app.style.animation='shakeApp 0.4s ease';
   setTimeout(function(){app.style.animation='';},420);
@@ -858,6 +869,45 @@ function renderSP(){
         '<span class="toggle-slider"></span>'+
       '</label>'+
     '</div>'+
+    '<div class="toggle-row">'+
+      '<div>'+
+        '<div class="toggle-label">Ефекти крові</div>'+
+        '<div class="toggle-desc">Краплі та патьоки крові при тапі</div>'+
+      '</div>'+
+      '<label class="toggle-switch">'+
+        '<input type="checkbox" id="fx-toggle" '+(G.effectsOn?'checked':'')+' onchange="toggleFx()">'+
+        '<span class="toggle-slider"></span>'+
+      '</label>'+
+    '</div>'+
+    '<div class="toggle-row">'+
+      '<div>'+
+        '<div class="toggle-label">Тряска екрану</div>'+
+        '<div class="toggle-desc">Екран трясеться при тапі на висок. рівнях</div>'+
+      '</div>'+
+      '<label class="toggle-switch">'+
+        '<input type="checkbox" id="shake-toggle" '+(G.shakeOn?'checked':'')+' onchange="toggleShake()">'+
+        '<span class="toggle-slider"></span>'+
+      '</label>'+
+    '</div>'+
+    (G.pUpgs['p1']>0 ?
+      '<div class="toggle-row" style="flex-direction:column;align-items:flex-start;gap:8px">'+
+        '<div>'+
+          '<div class="toggle-label">Автоклікер '+
+            (G.autoClickActive ?
+              '<span style="color:#44ff66;font-size:11px"> ● АКТИВНИЙ</span>' :
+              '<span style="color:#cc4444;font-size:11px"> ● ЗУПИНЕНО</span>')+
+          '</div>'+
+          '<div class="toggle-desc">Працює 4 год потім зупиняється</div>'+
+          (G.autoClickActive ?
+            '<div class="toggle-desc" style="color:#770000;margin-top:4px">Залишилось: '+
+              formatTime(AUTO_DURATION - (Date.now()-G.autoClickStarted))+
+            '</div>' : '')+
+        '</div>'+
+        '<button class="nick-btn" style="width:100%;margin-top:4px" onclick="restartAutoClick()">'+
+          (G.autoClickActive ? '↻ ПЕРЕЗАПУСТИТИ' : '▶ ЗАПУСТИТИ')+
+        '</button>'+
+      '</div>' : ''
+    )+
     (G.tgId?
       '<div style="background:#0a0000;border:1px solid #1a0000;border-radius:8px;padding:12px;font-size:12px;color:#440000;text-align:center">'+
         '✅ Акаунт прив\'язано до Telegram<br>'+
@@ -873,6 +923,28 @@ function renderSP(){
 function toggleVib(){
   G.vibrationOn=document.getElementById('vib-toggle').checked;
   if(G.vibrationOn)vibrate(30);
+}
+function toggleFx(){
+  G.effectsOn=document.getElementById('fx-toggle').checked;
+}
+function toggleShake(){
+  G.shakeOn=document.getElementById('shake-toggle').checked;
+}
+function restartAutoClick(){
+  if(G.pUpgs['p1']<=0){toast('Спочатку купи автоклікер!');return;}
+  G.autoClickActive=true;
+  G.autoClickStarted=Date.now();
+  renderSP();
+  toast('Автоклікер запущено на 4 години! ⚡');
+}
+function formatTime(ms){
+  if(ms<=0)return '0:00';
+  var h=Math.floor(ms/3600000);
+  var m=Math.floor((ms%3600000)/60000);
+  var s=Math.floor((ms%60000)/1000);
+  if(h>0)return h+'г '+m+'хв';
+  if(m>0)return m+'хв '+s+'сек';
+  return s+'сек';
 }
 
 async function changeNick(){
@@ -911,7 +983,23 @@ btnEl.addEventListener('touchstart',function(e){e.preventDefault();bleed(e);},{p
 btnEl.addEventListener('click',function(e){if(!e.sourceCapabilities||!e.sourceCapabilities.firesTouchEvents)bleed(e);});
 
 // ══ TIMERS ══
-setInterval(function(){if(G.aps>0){G.pain+=G.aps;recalc();updateHUD();}},1000);
+// Autoclick timer - works for 4 hours then needs restart
+var AUTO_DURATION = 4 * 3600 * 1000; // 4 hours in ms
+setInterval(function(){
+  if(G.aps>0 && G.autoClickActive){
+    var elapsed = Date.now() - G.autoClickStarted;
+    if(elapsed >= AUTO_DURATION){
+      // Time's up - stop autoclick
+      G.autoClickActive = false;
+      toast('Автоклікер зупинено! Перезапусти в налаштуваннях ⏰');
+      updateHUD();
+    } else {
+      G.pain += G.aps;
+      recalc();
+      updateHUD();
+    }
+  }
+},1000);
 setInterval(function(){dbSave();},10000);
 // Save when user leaves/hides the app
 document.addEventListener('visibilitychange', function(){
