@@ -335,7 +335,6 @@ var TAP_UPGRADES = [
 // Пасивна прокачка
 var PASSIVE = [
   {id:"p1",name:"Автоклікер",desc:"Авто біль/сек без витрати енергії (макс 10/сек). Працює 4 год потім треба перезапустити.",max:10,cost:function(l){return Math.round(1000*Math.pow(1.8,l))},eff:function(l){return l+" авто/сек"}},
-  {id:"p2",name:"Кривава аура",desc:"x2 до автоклікера",max:1,cost:function(l){return 500000},eff:function(l){return l?"x2 авто активно":"Вимк"}},
   {id:"p3",name:"Швидка регенерація",desc:"Енергія відновлюється вдвічі швидше",max:1,cost:function(l){return 50000},eff:function(l){return l?"Активно":"Вимк"}},
   {id:"p4",name:"Подвійна регенерація",desc:"+4 енергії замість +2 за тік",max:1,cost:function(l){return 200000},eff:function(l){return l?"Активно":"Вимк"}}
 ];
@@ -510,10 +509,8 @@ function recalc() {
   var tapBonus = 0;
   TAP_UPGRADES.forEach(function(u){ if(G.tUpgs[u.id]) tapBonus += u.bonus; });
   G.cpc = 1 + tapBonus;
-  // auto clicker: p1 level, x2 if Кривава аура
-  var autoBase = G.pUpgs['p1'] || 0;
-  var auraMult = (G.pUpgs['p2']||0) >= 1 ? 2 : 1;
-  G.aps = autoBase * auraMult;
+  // auto clicker
+  G.aps = G.pUpgs['p1'] || 0;
 }
 
 function vibrate(p) {
