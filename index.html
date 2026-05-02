@@ -88,7 +88,7 @@ body{display:flex;justify-content:center;font-family:'Courier New',monospace}
 #bottom-nav{background:#0a0000;border-top:1px solid #2a0000;display:flex;flex-shrink:0;padding:8px 0;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:2px 0;touch-action:manipulation}
 .nav-ico{font-size:20px;line-height:1;color:#550000;transition:.15s}
-.nav-lbl{font-size:10px;letter-spacing:1px;color:#550000;transition:.15s;font-weight:600}
+.nav-lbl{font-size:9px;letter-spacing:0px;color:#550000;transition:.15s;font-weight:600}
 .nav-item.on .nav-ico,.nav-item.on .nav-lbl{color:#ff3333}
 
 /* CARDS */
@@ -307,6 +307,23 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
       </div>
     </div>
 
+    <!-- TASKS PAGE -->
+    <div id="page-tasks" class="page">
+      <div class="sec-hd">Щоденні завдання</div>
+      <div id="daily-section" style="padding:0 16px 0">
+        <div style="background:#0f0000;border:1px solid #330000;border-left:3px solid #770000;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;color:#770000;letter-spacing:2px;font-weight:700;margin-bottom:10px">🗓 ЩОДНЯ</div>
+          <div class="daily-grid" id="daily-grid2"></div>
+          <div class="claim-zone" style="margin:0">
+            <div class="claim-lbl" id="claim-lbl2">Сьогодні: <span style="color:#ff3333">+100</span></div>
+            <button class="claim-btn" id="claim-btn2" onclick="claimDaily()">ЗАБРАТИ НАГОРОДУ</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec-hd">Завдання</div>
+      <div id="tasks-list" style="padding:0 16px"></div>
+    </div>
+
     <!-- CASINO PAGE -->
     <div id="page-casino" class="page">
       <div class="sec-hd">Казино болю</div>
@@ -393,6 +410,7 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
   <div id="bottom-nav">
     <div class="nav-item on" onclick="nav('main',this)"><span class="nav-ico">☠</span><span class="nav-lbl">Кров</span></div>
     <div class="nav-item" onclick="nav('upgrade',this)"><span class="nav-ico">↗</span><span class="nav-lbl">Прокачка</span></div>
+    <div class="nav-item" onclick="nav('tasks',this)"><span class="nav-ico">📋</span><span class="nav-lbl">Завдання</span></div>
     <div class="nav-item" onclick="nav('casino',this)"><span class="nav-ico">🎰</span><span class="nav-lbl">Казино</span></div>
     <div class="nav-item" onclick="nav('lb',this)"><span class="nav-ico">🏆</span><span class="nav-lbl">Топ</span></div>
     <div class="nav-item" onclick="nav('rewards',this)"><span class="nav-ico">🎁</span><span class="nav-lbl">Нагороди</span></div>
@@ -461,8 +479,9 @@ var G = {
   vibrationOn: true,
   effectsOn: true,
   shakeOn: true,
-  autoClickStarted: 0,  // timestamp when autoclick was started
-  autoClickActive: false
+  autoClickStarted: 0,
+  autoClickActive: false,
+  taskProgress: {taps:0, claimed:[]}
 };
 
 // ══ SUPABASE ══
@@ -487,6 +506,7 @@ async function dbLoad() {
       try { G.pUpgs = JSON.parse(d.passive_upgs||'{}'); } catch(e){}
       try { G.lUpgs = JSON.parse(d.lvl_upgs||'{}'); } catch(e){}
       try { G.tUpgs = JSON.parse(d.tap_upgs||'{}'); } catch(e){}
+      try { G.taskProgress = JSON.parse(d.task_progress||'{"taps":0,"claimed":[]}'); } catch(e){}
       // Restore energy: calc how much regenerated while offline
       var savedEnergy = d.energy != null ? d.energy : MAX_E;
       var savedAt = d.updated_at ? new Date(d.updated_at).getTime() : Date.now();
@@ -545,6 +565,7 @@ async function dbSave() {
       lvl_upgs: JSON.stringify(G.lUpgs),
       tap_upgs: JSON.stringify(G.tUpgs),
       auto_click_started: G.autoClickStarted || 0,
+      task_progress: JSON.stringify(G.taskProgress||{taps:0,claimed:[]}),
       updated_at: new Date().toISOString()
     }, {onConflict: 'tg_id'});
   } catch(e) { console.log('save:', e); }
@@ -697,6 +718,9 @@ function bleed(e){
   var gained=G.cpc;
   G.pain+=gained;
   G.energy=Math.max(0,G.energy-E_PER_TAP);
+  // Track tap count for tasks
+  if(!G.taskProgress)G.taskProgress={taps:0,claimed:[]};
+  G.taskProgress.taps=(G.taskProgress.taps||0)+1;
   // Level up — pain НЕ скидається, рівень тільки зростає
   while(G.pain >= G.nextLvlAt) {
     G.nextLvlAt += (G.lvl + 1) * 1000;
@@ -1068,6 +1092,114 @@ async function changeNick(){
   else{msg.innerHTML='<div class="msg-err">Помилка. Спробуй ще.</div>';}
 }
 
+// ══ TASKS ══
+var TASKS_DEF = [
+  {id:"task_taps_1k",   type:"taps",   target:1000,   reward:500,    title:"1 000 тапів",        desc:"Натисни кнопку 1 000 разів"},
+  {id:"task_taps_5k",   type:"taps",   target:5000,   reward:2000,   title:"5 000 тапів",         desc:"Натисни кнопку 5 000 разів"},
+  {id:"task_taps_20k",  type:"taps",   target:20000,  reward:8000,   title:"20 000 тапів",        desc:"Натисни кнопку 20 000 разів"},
+  {id:"task_taps_100k", type:"taps",   target:100000, reward:40000,  title:"100 000 тапів",       desc:"Натисни кнопку 100 000 разів"},
+  {id:"task_pain_10k",  type:"pain",   target:10000,  reward:1000,   title:"10К болю",            desc:"Назбирай 10 000 болю"},
+  {id:"task_pain_100k", type:"pain",   target:100000, reward:8000,   title:"100К болю",           desc:"Назбирай 100 000 болю"},
+  {id:"task_pain_1m",   type:"pain",   target:1000000,reward:50000,  title:"1М болю",             desc:"Назбирай 1 000 000 болю"},
+  {id:"task_lvl_5",     type:"lvl",    target:5,      reward:3000,   title:"Досягни рівня 5",     desc:"Підніміть свій рівень до 5"},
+  {id:"task_lvl_10",    type:"lvl",    target:10,     reward:10000,  title:"Досягни рівня 10",    desc:"Підніміть свій рівень до 10"},
+  {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
+  {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
+  {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
+  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
+  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
+  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+];
+
+// Task progress stored in G
+// G.taskProgress = {taps: N, claimed: ['task_id1',...]}
+
+function getTaskProgress(task) {
+  if (!G.taskProgress) G.taskProgress = {};
+  switch(task.type) {
+    case 'taps':   return G.taskProgress.taps || 0;
+    case 'pain':   return G.pain;
+    case 'lvl':    return G.lvl;
+    case 'streak': return G.streak;
+    case 'spins':  return casinoStats.spins;
+    case 'cwins':  return casinoStats.wins;
+    default: return 0;
+  }
+}
+
+function buildTasks() {
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  var list = document.getElementById('tasks-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Also rebuild daily
+  buildDailyInTasks();
+
+  TASKS_DEF.forEach(function(task) {
+    var claimed = G.taskProgress.claimed && G.taskProgress.claimed.indexOf(task.id) >= 0;
+    var prog = getTaskProgress(task);
+    var pct = Math.min(100, Math.floor(prog / task.target * 100));
+    var done = prog >= task.target;
+    var canClaim = done && !claimed;
+
+    var d = document.createElement('div');
+    d.className = 'upg-card';
+    d.style.marginBottom = '10px';
+    d.innerHTML =
+      '<div class="upg-top">' +
+        '<span class="upg-name">' + task.title + '</span>' +
+        '<span class="upg-lv" style="color:#ff4444">+' + fmt(task.reward) + '</span>' +
+      '</div>' +
+      '<div class="upg-desc">' + task.desc + '</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+        '<span style="font-size:12px;color:#cc5555">' + fmt(prog) + ' / ' + fmt(task.target) + '</span>' +
+        '<span style="font-size:12px;color:#770000">' + pct + '%</span>' +
+      '</div>' +
+      '<div class="upg-bar-wrap"><div class="upg-bar" style="width:' + pct + '%"></div></div>' +
+      '<button class="upg-btn" ' + (claimed || !done ? 'disabled' : '') +
+        ' onclick="claimTask(&quot;' + task.id + '&quot;)">' +
+        (claimed ? '✓ ОТРИМАНО' : done ? 'ЗАБРАТИ НАГОРОДУ' : 'В ПРОЦЕСІ...') +
+      '</button>';
+    list.appendChild(d);
+  });
+}
+
+function claimTask(id) {
+  var task = TASKS_DEF.find(function(t){ return t.id === id; });
+  if (!task) return;
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  if (G.taskProgress.claimed.indexOf(id) >= 0) return;
+  var prog = getTaskProgress(task);
+  if (prog < task.target) return;
+  G.pain += task.reward;
+  G.taskProgress.claimed.push(id);
+  buildTasks();
+  updateHUD();
+  toast('Завдання виконано! +' + fmt(task.reward) + ' болю 🎯');
+  vibrate([20,10,40]);
+  dbSave();
+}
+
+function buildDailyInTasks() {
+  var grid = document.getElementById('daily-grid2');
+  var lbl = document.getElementById('claim-lbl2');
+  var btn = document.getElementById('claim-btn2');
+  if (!grid) return;
+  grid.innerHTML = '';
+  var today = new Date().toDateString();
+  var claimed = G.lastClaim === today;
+  DAILY_R.forEach(function(amt, i) {
+    var d = document.createElement('div');
+    d.className = 'day-box' + (i < G.streak ? ' done' : i === G.streak ? ' today' : '');
+    d.innerHTML = '<div class="day-num">'+(i+1)+'</div><div class="day-amt">+'+fmt(amt)+'</div>';
+    grid.appendChild(d);
+  });
+  var idx = Math.min(G.streak, DAILY_R.length-1);
+  if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
+  if (btn) btn.disabled = claimed;
+}
+
 // ══ CASINO ══
 var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤'];
 var PAYOUTS = {
@@ -1234,6 +1366,7 @@ function nav(page,el){
   if(page==='lb')buildLB();
   if(page==='rewards')buildRewards();
   if(page==='casino')updateCasinoStatsUI();
+  if(page==='tasks')buildTasks();
 }
 
 // ══ BUTTON ══
