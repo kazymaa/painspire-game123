@@ -193,6 +193,20 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
 .lvlup-el{position:absolute;top:40%;left:50%;pointer-events:none;animation:lvlUp 1.5s ease forwards;z-index:30;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;text-align:center;white-space:nowrap}
 .toast-el{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#1f0000;border:2px solid #cc0000;border-radius:8px;padding:10px 20px;font-size:13px;color:#ff5555;white-space:nowrap;z-index:40;font-family:'Courier New',monospace;font-weight:700;max-width:90%;text-align:center}
 .blood-streak{position:absolute;top:0;width:3px;background:linear-gradient(180deg,#cc0000,transparent);pointer-events:none;z-index:5;animation:bloodDrip .6s ease-out forwards;border-radius:0 0 3px 3px}
+.reel-wrap{width:72px;height:72px;background:#0a0000;border:2px solid #440000;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.reel{font-size:38px;line-height:1;transition:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.reel.spinning{animation:reelSpin 0.1s linear infinite}
+@keyframes reelSpin{0%{transform:translateY(-5px)}50%{transform:translateY(5px)}100%{transform:translateY(-5px)}}
+.reel-wrap.winner{border-color:#ff2222;box-shadow:0 0 15px #cc000077;animation:winGlow .4s ease infinite alternate}
+@keyframes winGlow{from{box-shadow:0 0 10px #cc000077}to{box-shadow:0 0 25px #ff0000bb}}
+.bet-btn{padding:7px 12px;background:#1a0000;border:1px solid #550000;border-radius:6px;color:#ff5555;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation}
+.bet-btn:hover{background:#250000;border-color:#880000}
+.bet-btn.active{background:#2a0000;border-color:#cc0000;color:#ff3333}
+.pay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a0000;font-size:12px}
+.pay-combo{flex:1;color:#cc6666;font-size:15px}
+.pay-mult{width:45px;color:#ff4444;font-weight:900;font-size:14px}
+.pay-desc{color:#440000;font-size:11px}
+@keyframes casinoWin{0%{transform:scale(1)}25%{transform:scale(1.15)}50%{transform:scale(1)}75%{transform:scale(1.08)}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -293,13 +307,93 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
       </div>
     </div>
 
+    <!-- CASINO PAGE -->
+    <div id="page-casino" class="page">
+      <div class="sec-hd">Казино болю</div>
+      <div id="casino-wrap" style="padding:0 16px">
+
+        <!-- SLOT MACHINE -->
+        <div id="slot-machine" style="background:#0f0000;border:2px solid #cc0000;border-radius:14px;padding:20px;margin-bottom:14px;text-align:center">
+          <div style="font-size:12px;color:#770000;letter-spacing:2px;margin-bottom:14px;font-weight:700">🎰 БАРАБАН БОЛЮ</div>
+
+          <!-- REELS -->
+          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
+            <div class="reel-wrap">
+              <div class="reel" id="reel-1">💀</div>
+            </div>
+            <div class="reel-wrap">
+              <div class="reel" id="reel-2">🩸</div>
+            </div>
+            <div class="reel-wrap">
+              <div class="reel" id="reel-3">💀</div>
+            </div>
+          </div>
+
+          <!-- RESULT -->
+          <div id="casino-result" style="min-height:32px;font-size:14px;font-weight:700;color:#ff6666;margin-bottom:14px"></div>
+
+          <!-- BET -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:#550000;letter-spacing:1px;margin-bottom:8px;font-weight:700">СТАВКА</div>
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+              <button class="bet-btn" onclick="setBet(100)">100</button>
+              <button class="bet-btn" onclick="setBet(500)">500</button>
+              <button class="bet-btn" onclick="setBet(1000)">1K</button>
+              <button class="bet-btn" onclick="setBet(5000)">5K</button>
+              <button class="bet-btn" onclick="setBet(10000)">10K</button>
+              <button class="bet-btn" onclick="setBet(50000)">50K</button>
+            </div>
+            <div style="margin-top:10px;display:flex;align-items:center;gap:8px;justify-content:center">
+              <span style="font-size:12px;color:#550000">Своя ставка:</span>
+              <input id="custom-bet" type="number" min="1" placeholder="введи суму"
+                style="width:120px;padding:8px;background:#0a0000;border:1px solid #440000;border-radius:6px;color:#ff4444;font-family:'Courier New',monospace;font-size:13px;outline:none;text-align:center">
+              <button class="bet-btn" onclick="setCustomBet()">OK</button>
+            </div>
+          </div>
+
+          <div style="background:#0a0000;border:1px solid #1a0000;border-radius:8px;padding:10px;margin-bottom:14px">
+            <div style="font-size:11px;color:#440000;margin-bottom:4px">Поточна ставка:</div>
+            <div id="current-bet-display" style="font-size:22px;color:#ff3333;font-weight:900">100 болю</div>
+          </div>
+
+          <button id="spin-btn" onclick="spinSlots()" style="width:100%;padding:15px;background:radial-gradient(circle,#330000,#150000);border:2px solid #cc0000;border-radius:10px;color:#ff3333;font-size:16px;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px #cc000055;touch-action:manipulation">
+            🎰 КРУТИТИ
+          </button>
+        </div>
+
+        <!-- PAYOUTS TABLE -->
+        <div style="background:#0f0000;border:1px solid #330000;border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;color:#770000;letter-spacing:2px;margin-bottom:10px;font-weight:700">ТАБЛИЦЯ ВИПЛАТ</div>
+          <div class="pay-row"><span class="pay-combo">💀💀💀</span><span class="pay-mult">x 10</span><span class="pay-desc">Джекпот!</span></div>
+          <div class="pay-row"><span class="pay-combo">🩸🩸🩸</span><span class="pay-mult">x 5</span><span class="pay-desc">Кривавий потік</span></div>
+          <div class="pay-row"><span class="pay-combo">🔥🔥🔥</span><span class="pay-mult">x 4</span><span class="pay-desc">Пекло</span></div>
+          <div class="pay-row"><span class="pay-combo">⚡⚡⚡</span><span class="pay-mult">x 3</span><span class="pay-desc">Удар долі</span></div>
+          <div class="pay-row"><span class="pay-combo">💎💎💎</span><span class="pay-mult">x 8</span><span class="pay-desc">Діамантовий удар</span></div>
+          <div class="pay-row"><span class="pay-combo">Будь-які 2 однак.</span><span class="pay-mult">x 1.5</span><span class="pay-desc">Мала перемога</span></div>
+          <div class="pay-row" style="border:none"><span class="pay-combo">Нічого</span><span class="pay-mult">x 0</span><span class="pay-desc">Спробуй ще</span></div>
+        </div>
+
+        <!-- STATS -->
+        <div style="background:#0f0000;border:1px solid #330000;border-radius:10px;padding:14px">
+          <div style="font-size:11px;color:#770000;letter-spacing:2px;margin-bottom:8px;font-weight:700">ТВОЯ СТАТИСТИКА</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="as"><div class="as-l">СПІНІВ</div><div class="as-v" id="stat-spins">0</div></div>
+            <div class="as"><div class="as-l">ВИГРАШІВ</div><div class="as-v" id="stat-wins">0</div></div>
+            <div class="as"><div class="as-l">ЗАРОБЛЕНО</div><div class="as-v" id="stat-earned">0</div></div>
+            <div class="as"><div class="as-l">ПРОГРАНО</div><div class="as-v" id="stat-lost">0</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
   <!-- BOTTOM NAV — завжди видимий -->
   <div id="bottom-nav">
     <div class="nav-item on" onclick="nav('main',this)"><span class="nav-ico">☠</span><span class="nav-lbl">Кров</span></div>
     <div class="nav-item" onclick="nav('upgrade',this)"><span class="nav-ico">↗</span><span class="nav-lbl">Прокачка</span></div>
-    <div class="nav-item" onclick="nav('daily',this)"><span class="nav-ico">📅</span><span class="nav-lbl">Завдання</span></div>
+    <div class="nav-item" onclick="nav('casino',this)"><span class="nav-ico">🎰</span><span class="nav-lbl">Казино</span></div>
     <div class="nav-item" onclick="nav('lb',this)"><span class="nav-ico">🏆</span><span class="nav-lbl">Топ</span></div>
     <div class="nav-item" onclick="nav('rewards',this)"><span class="nav-ico">🎁</span><span class="nav-lbl">Нагороди</span></div>
   </div>
@@ -917,15 +1011,33 @@ function renderSP(){
     );
 }
 
+function saveSettings(){
+  try{localStorage.setItem('ps_settings',JSON.stringify({
+    vibrationOn:G.vibrationOn,
+    effectsOn:G.effectsOn,
+    shakeOn:G.shakeOn
+  }));}catch(e){}
+}
+function loadSettings(){
+  try{
+    var s=JSON.parse(localStorage.getItem('ps_settings')||'{}');
+    if(s.vibrationOn!=null) G.vibrationOn=s.vibrationOn;
+    if(s.effectsOn!=null)   G.effectsOn=s.effectsOn;
+    if(s.shakeOn!=null)     G.shakeOn=s.shakeOn;
+  }catch(e){}
+}
 function toggleVib(){
   G.vibrationOn=document.getElementById('vib-toggle').checked;
   if(G.vibrationOn)vibrate(30);
+  saveSettings();
 }
 function toggleFx(){
   G.effectsOn=document.getElementById('fx-toggle').checked;
+  saveSettings();
 }
 function toggleShake(){
   G.shakeOn=document.getElementById('shake-toggle').checked;
+  saveSettings();
 }
 function restartAutoClick(){
   if(G.pUpgs['p1']<=0){toast('Спочатку купи автоклікер!');return;}
@@ -956,6 +1068,155 @@ async function changeNick(){
   else{msg.innerHTML='<div class="msg-err">Помилка. Спробуй ще.</div>';}
 }
 
+// ══ CASINO ══
+var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤'];
+var PAYOUTS = {
+  '💀💀💀': 10,
+  '🩸🩸🩸': 5,
+  '🔥🔥🔥': 4,
+  '⚡⚡⚡': 3,
+  '💎💎💎': 8
+};
+var casinoBet = 100;
+var casinoSpinning = false;
+var casinoStats = {spins:0, wins:0, earned:0, lost:0};
+
+function loadCasinoStats(){
+  try{var s=JSON.parse(localStorage.getItem('ps_casino')||'{}');
+    if(s.spins)casinoStats.spins=s.spins;
+    if(s.wins)casinoStats.wins=s.wins;
+    if(s.earned)casinoStats.earned=s.earned;
+    if(s.lost)casinoStats.lost=s.lost;
+  }catch(e){}
+}
+function saveCasinoStats(){
+  try{localStorage.setItem('ps_casino',JSON.stringify(casinoStats));}catch(e){}
+}
+function updateCasinoStatsUI(){
+  var s=document.getElementById('stat-spins');var w=document.getElementById('stat-wins');
+  var e=document.getElementById('stat-earned');var l=document.getElementById('stat-lost');
+  if(s)s.textContent=casinoStats.spins;
+  if(w)w.textContent=casinoStats.wins;
+  if(e)e.textContent=fmt(casinoStats.earned);
+  if(l)l.textContent=fmt(casinoStats.lost);
+}
+
+function setBet(amount){
+  casinoBet=amount;
+  document.getElementById('current-bet-display').textContent=fmt(amount)+' болю';
+  document.querySelectorAll('.bet-btn').forEach(function(b){b.classList.remove('active');});
+  event.target.classList.add('active');
+}
+function setCustomBet(){
+  var input=document.getElementById('custom-bet');
+  var val=parseInt(input.value)||0;
+  if(val<1){toast('Мінімальна ставка: 1');return;}
+  if(val>G.pain){toast('Мало болю!');return;}
+  casinoBet=val;
+  document.getElementById('current-bet-display').textContent=fmt(val)+' болю';
+  document.querySelectorAll('.bet-btn').forEach(function(b){b.classList.remove('active');});
+}
+
+function spinSlots(){
+  if(casinoSpinning)return;
+  if(G.pain<casinoBet){toast('Мало болю для ставки!');return;}
+  if(casinoBet<1){toast('Встанови ставку!');return;}
+
+  casinoSpinning=true;
+  var btn=document.getElementById('spin-btn');
+  btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
+
+  // Deduct bet
+  G.pain-=casinoBet;
+  casinoStats.spins++;
+  casinoStats.lost+=casinoBet;
+  updateHUD();
+
+  // Clear winner class
+  ['reel-1','reel-2','reel-3'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.parentNode.classList.remove('winner');
+    if(el)el.classList.add('spinning');
+  });
+  document.getElementById('casino-result').textContent='';
+
+  // Pick results
+  var r1=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+  var r2=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+  var r3=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+
+  // Reveal one by one
+  setTimeout(function(){
+    var el=document.getElementById('reel-1');
+    el.classList.remove('spinning');el.textContent=r1;
+  },600);
+  setTimeout(function(){
+    var el=document.getElementById('reel-2');
+    el.classList.remove('spinning');el.textContent=r2;
+  },1000);
+  setTimeout(function(){
+    var el=document.getElementById('reel-3');
+    el.classList.remove('spinning');el.textContent=r3;
+    // Check result
+    setTimeout(function(){showCasinoResult(r1,r2,r3);},200);
+  },1400);
+}
+
+function showCasinoResult(r1,r2,r3){
+  var combo=r1+r2+r3;
+  var resultEl=document.getElementById('casino-result');
+  var mult=0;
+
+  if(PAYOUTS[combo]){
+    mult=PAYOUTS[combo];
+  } else if(r1===r2||r2===r3||r1===r3){
+    mult=1.5;
+  }
+
+  if(mult>0){
+    var won=Math.floor(casinoBet*mult);
+    G.pain+=won;
+    casinoStats.wins++;
+    casinoStats.earned+=won;
+    casinoStats.lost-=casinoBet; // correct: didn't lose this time
+    // Highlight winners
+    if(r1===r2||r1===r3){document.getElementById('reel-1').parentNode.classList.add('winner');}
+    if(r2===r1||r2===r3){document.getElementById('reel-2').parentNode.classList.add('winner');}
+    if(r3===r1||r3===r2){document.getElementById('reel-3').parentNode.classList.add('winner');}
+    if(mult>=5){
+      resultEl.innerHTML='<span style="color:#ffdd00;font-size:18px">🏆 ДЖЕКПОТ! +'+fmt(won)+' болю!</span>';
+      vibrate([50,20,50,20,100]);
+      if(G.effectsOn){
+        for(var i=0;i<5;i++){
+          (function(d){setTimeout(function(){
+            var fl=document.createElement('div');fl.className='flash-el';
+            fl.style.background='rgba(200,150,0,0.15)';
+            document.getElementById('app').appendChild(fl);
+            setTimeout(function(){if(fl.parentNode)fl.remove();},450);
+          },d*150);})(i);
+        }
+      }
+    } else if(mult>=3){
+      resultEl.innerHTML='<span style="color:#ff4444">🎉 ВИГРАШ! +'+fmt(won)+' болю!</span>';
+      vibrate([30,10,30]);
+    } else {
+      resultEl.innerHTML='<span style="color:#cc4444">✓ Маленький виграш! +'+fmt(won)+' болю</span>';
+      vibrate(20);
+    }
+  } else {
+    resultEl.innerHTML='<span style="color:#440000">✗ Не пощастило. Спробуй ще!</span>';
+  }
+
+  updateHUD();
+  updateCasinoStatsUI();
+  saveCasinoStats();
+  dbSave();
+
+  var btn=document.getElementById('spin-btn');
+  btn.disabled=false;btn.textContent='🎰 КРУТИТИ';
+  casinoSpinning=false;
+}
+
 // ══ NAV ══
 function nav(page,el){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -972,6 +1233,7 @@ function nav(page,el){
   if(page==='daily')buildDaily();
   if(page==='lb')buildLB();
   if(page==='rewards')buildRewards();
+  if(page==='casino')updateCasinoStatsUI();
 }
 
 // ══ BUTTON ══
@@ -1022,6 +1284,8 @@ async function init(){
     for(var ri=1;ri<=G.lvl;ri++) nla += ri*1000;
     G.nextLvlAt = nla;
   }
+  loadSettings();
+  loadCasinoStats();
   recalc();startRegen();updateHUD();
   document.getElementById('loading').style.display='none';
 }
