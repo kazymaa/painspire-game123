@@ -362,7 +362,7 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
           <button id="case-spin-btn" onclick="openCase()" style="width:100%;padding:14px;background:radial-gradient(circle,#330000,#150000);border:2px solid #cc0000;border-radius:10px;color:#ff3333;font-size:15px;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px #cc000055;touch-action:manipulation">
             📦 ВІДКРИТИ
           </button>
-          <button onclick="closeCaseOpener()" style="width:100%;padding:10px;background:none;border:1px solid #1a0000;border-radius:8px;color:#330000;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;margin-top:8px;touch-action:manipulation">← Назад</button>
+          <button onclick="closeCaseOpener()" style="width:100%;padding:12px;background:#1a0000;border:2px solid #880000;border-radius:8px;color:#ff5555;font-family:'Courier New',monospace;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;touch-action:manipulation;letter-spacing:1px">← НАЗАД ДО КЕЙСІВ</button>
         </div>
 
         <!-- STATS -->
@@ -709,6 +709,8 @@ function bleed(e){
   if(G.lvl>=10&&Math.random()<0.4)shakeScreen();
   else if(G.lvl>=3&&Math.random()<0.3)shakeBtn();
   updateHUD();
+  // Local backup every tap (fast, no network)
+  try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
 }
 
 // ══ VFX ══
@@ -868,6 +870,7 @@ function buyTap(id){
   var cost=u.cost(0);if(G.pain<cost){toast('Мало болю!');return;}
   G.pain-=cost;G.tUpgs[id]=true;recalc();buildTapUpgrades();updateHUD();vibrate(25);
   toast('+1 до тапу! Тепер +'+G.cpc);
+  try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
   dbSave();
 }
 function buyP(id){
@@ -1211,7 +1214,7 @@ var CASES_DEF = [
       {val:150000, label:'150 000', chance:14, rarity:'rare'},
       {val:300000, label:'300 000', chance:12, rarity:'epic'},
       {val:500000, label:'500 000', chance:10, rarity:'epic'},
-      {val:0,      label:'👕 Футболка',chance:12,rarity:'prize',prize:true}
+      {val:0,      label:'👕 Acne Studio',chance:12,rarity:'prize',prize:true}
     ]
   }
 ];
@@ -2154,10 +2157,20 @@ setInterval(function(){
 setInterval(function(){dbSave();},10000);
 // Save when user leaves/hides the app
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState==='hidden') dbSave();
+  if(document.visibilityState==='hidden') {
+    // Sync local backup
+    try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
+    dbSave();
+  }
 });
-window.addEventListener('beforeunload', function(){ dbSave(); });
-window.addEventListener('pagehide', function(){ dbSave(); });
+window.addEventListener('beforeunload', function(){
+  try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
+  dbSave();
+});
+window.addEventListener('pagehide', function(){
+  try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
+  dbSave();
+});
 
 // ══ INIT ══
 async function init(){
@@ -2170,6 +2183,14 @@ async function init(){
       if(u&&u.id){G.tgId=u.id;G.username=u.first_name||u.username||'Гравець';await dbLoad();}
     }
   }catch(e){console.log('init:',e);}
+  // Merge with local backup - take whichever has more pain
+  try {
+    var backup = JSON.parse(localStorage.getItem('ps_pain_backup') || 'null');
+    if (backup && backup.pain > G.pain) {
+      G.pain = backup.pain;
+    }
+  } catch(e) {}
+
   // ALWAYS recalculate level from pain (fixes manual DB edits)
   {
     var cl=1, cn=1000;
