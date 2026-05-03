@@ -193,20 +193,30 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
 .lvlup-el{position:absolute;top:40%;left:50%;pointer-events:none;animation:lvlUp 1.5s ease forwards;z-index:30;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;text-align:center;white-space:nowrap}
 .toast-el{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:#1f0000;border:2px solid #cc0000;border-radius:8px;padding:10px 20px;font-size:13px;color:#ff5555;white-space:nowrap;z-index:40;font-family:'Courier New',monospace;font-weight:700;max-width:90%;text-align:center}
 .blood-streak{position:absolute;top:0;width:3px;background:linear-gradient(180deg,#cc0000,transparent);pointer-events:none;z-index:5;animation:bloodDrip .6s ease-out forwards;border-radius:0 0 3px 3px}
-.reel-wrap{width:72px;height:72px;background:#0a0000;border:2px solid #440000;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.reel{font-size:38px;line-height:1;transition:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
-.reel.spinning{animation:reelSpin 0.1s linear infinite}
-@keyframes reelSpin{0%{transform:translateY(-5px)}50%{transform:translateY(5px)}100%{transform:translateY(-5px)}}
-.reel-wrap.winner{border-color:#ff2222;box-shadow:0 0 15px #cc000077;animation:winGlow .4s ease infinite alternate}
-@keyframes winGlow{from{box-shadow:0 0 10px #cc000077}to{box-shadow:0 0 25px #ff0000bb}}
-.bet-btn{padding:7px 12px;background:#1a0000;border:1px solid #550000;border-radius:6px;color:#ff5555;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;font-weight:700;touch-action:manipulation}
-.bet-btn:hover{background:#250000;border-color:#880000}
-.bet-btn.active{background:#2a0000;border-color:#cc0000;color:#ff3333}
-.pay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #1a0000;font-size:12px}
-.pay-combo{flex:1;color:#cc6666;font-size:15px}
-.pay-mult{width:45px;color:#ff4444;font-weight:900;font-size:14px}
-.pay-desc{color:#440000;font-size:11px}
-@keyframes casinoWin{0%{transform:scale(1)}25%{transform:scale(1.15)}50%{transform:scale(1)}75%{transform:scale(1.08)}100%{transform:scale(1)}}
+/* CASES */
+.case-card{background:#0f0000;border:1px solid #330000;border-radius:12px;padding:16px;margin-bottom:12px;cursor:pointer;touch-action:manipulation;transition:border-color .2s}
+.case-card:active{border-color:#cc0000}
+.case-card-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.case-icon{font-size:36px;line-height:1}
+.case-name{font-size:17px;color:#ff6666;font-weight:900}
+.case-price{font-size:14px;color:#cc3333;font-weight:700;margin-top:2px}
+.case-drops{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.drop-pill{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;font-family:'Courier New',monospace}
+.drop-pill.common{background:#150000;color:#770000;border:1px solid #330000}
+.drop-pill.rare{background:#150020;color:#9933cc;border:1px solid #440066}
+.drop-pill.epic{background:#001510;color:#00aa66;border:1px solid #004433}
+.drop-pill.prize{background:#221500;color:#ffaa00;border:1px solid #664400}
+.open-case-btn{width:100%;padding:11px;background:#1f0000;border:2px solid #cc0000;border-radius:8px;color:#ff4444;font-size:14px;font-family:'Courier New',monospace;font-weight:700;cursor:pointer;touch-action:manipulation;letter-spacing:1px}
+/* STRIP ITEMS */
+.strip-item{width:86px;height:82px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;border:2px solid #2a0000;margin:0 3px;background:#0d0000;gap:2px}
+.strip-item.common{border-color:#2a0000;background:#0d0000}
+.strip-item.rare{border-color:#440066;background:#0d0012}
+.strip-item.epic{border-color:#004433;background:#000d08}
+.strip-item.prize{border-color:#664400;background:#0d0800}
+.strip-item.win{border-color:#cc0000!important;background:#1a0000!important;box-shadow:0 0 15px #cc000077}
+.strip-item-val{font-size:12px;font-weight:900;font-family:'Courier New',monospace}
+.strip-item-ico{font-size:22px;line-height:1}
+@keyframes stripWin{0%,100%{box-shadow:0 0 10px #cc000077}50%{box-shadow:0 0 25px #ff0000cc}}
 </style>
 </head>
 <body>
@@ -324,94 +334,57 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
       <div id="tasks-list" style="padding:0 16px"></div>
     </div>
 
-    <!-- CASINO PAGE -->
-    <div id="page-casino" class="page">
-      <div class="sec-hd">Казино болю</div>
-      <div id="casino-wrap" style="padding:0 16px">
+    <!-- CASES PAGE -->
+    <div id="page-cases" class="page">
+      <div class="sec-hd">Кейси</div>
+      <div style="padding:0 16px">
 
-        <!-- SLOT MACHINE -->
-        <div id="slot-machine" style="background:#0f0000;border:2px solid #cc0000;border-radius:14px;padding:20px;margin-bottom:14px;text-align:center">
-          <div style="font-size:12px;color:#770000;letter-spacing:2px;margin-bottom:14px;font-weight:700">🎰 БАРАБАН БОЛЮ</div>
+        <!-- CASE CARDS -->
+        <div id="case-cards"></div>
 
-          <!-- REELS -->
-          <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
-            <div class="reel-wrap">
-              <div class="reel" id="reel-1">💀</div>
-            </div>
-            <div class="reel-wrap">
-              <div class="reel" id="reel-2">🩸</div>
-            </div>
-            <div class="reel-wrap">
-              <div class="reel" id="reel-3">💀</div>
-            </div>
+        <!-- CASE OPENER -->
+        <div id="case-opener" style="display:none;background:#0f0000;border:2px solid #cc0000;border-radius:14px;padding:16px;margin-bottom:14px">
+          <div style="text-align:center;font-size:13px;color:#770000;letter-spacing:2px;font-weight:700;margin-bottom:12px" id="opener-title">КЕЙС</div>
+
+          <!-- ROULETTE STRIP -->
+          <div style="position:relative;height:90px;overflow:hidden;border-radius:10px;border:2px solid #440000;background:#0a0000;margin-bottom:10px">
+            <!-- Center line -->
+            <div style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#cc0000;z-index:10;transform:translateX(-50%)"></div>
+            <div style="position:absolute;top:0;bottom:0;left:50%;width:80px;border-left:2px solid #cc000066;border-right:2px solid #cc000066;background:rgba(200,0,0,0.05);z-index:9;transform:translateX(-50%)"></div>
+            <!-- Strip -->
+            <div id="case-strip" style="display:flex;position:absolute;top:0;left:0;height:100%;align-items:center;will-change:transform"></div>
           </div>
 
-          <!-- RESULT -->
-          <div id="casino-result" style="min-height:32px;font-size:14px;font-weight:700;color:#ff6666;margin-bottom:14px"></div>
+          <!-- Result -->
+          <div id="case-result" style="text-align:center;min-height:40px;font-size:16px;font-weight:900;color:#ff4444;margin-bottom:12px"></div>
 
-          <!-- BET -->
-          <div style="margin-bottom:12px">
-            <div style="font-size:11px;color:#550000;letter-spacing:1px;margin-bottom:8px;font-weight:700">СТАВКА</div>
-            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-              <button class="bet-btn" onclick="setBet(100)">100</button>
-              <button class="bet-btn" onclick="setBet(500)">500</button>
-              <button class="bet-btn" onclick="setBet(1000)">1K</button>
-              <button class="bet-btn" onclick="setBet(5000)">5K</button>
-              <button class="bet-btn" onclick="setBet(10000)">10K</button>
-              <button class="bet-btn" onclick="setBet(50000)">50K</button>
-            </div>
-            <div style="margin-top:10px;display:flex;align-items:center;gap:8px;justify-content:center">
-              <span style="font-size:12px;color:#550000">Своя ставка:</span>
-              <input id="custom-bet" type="number" min="1" placeholder="введи суму"
-                style="width:120px;padding:8px;background:#0a0000;border:1px solid #440000;border-radius:6px;color:#ff4444;font-family:'Courier New',monospace;font-size:13px;outline:none;text-align:center">
-              <button class="bet-btn" onclick="setCustomBet()">OK</button>
-            </div>
-          </div>
-
-          <div style="background:#0a0000;border:1px solid #1a0000;border-radius:8px;padding:10px;margin-bottom:14px">
-            <div style="font-size:11px;color:#440000;margin-bottom:4px">Поточна ставка:</div>
-            <div id="current-bet-display" style="font-size:22px;color:#ff3333;font-weight:900">100 болю</div>
-          </div>
-
-          <button id="spin-btn" onclick="spinSlots()" style="width:100%;padding:15px;background:radial-gradient(circle,#330000,#150000);border:2px solid #cc0000;border-radius:10px;color:#ff3333;font-size:16px;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px #cc000055;touch-action:manipulation">
-            🎰 КРУТИТИ
+          <!-- Spin button -->
+          <button id="case-spin-btn" onclick="openCase()" style="width:100%;padding:14px;background:radial-gradient(circle,#330000,#150000);border:2px solid #cc0000;border-radius:10px;color:#ff3333;font-size:15px;font-family:'Courier New',monospace;font-weight:900;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px #cc000055;touch-action:manipulation">
+            📦 ВІДКРИТИ
           </button>
-        </div>
-
-        <!-- PAYOUTS TABLE -->
-        <div style="background:#0f0000;border:1px solid #330000;border-radius:10px;padding:14px;margin-bottom:14px">
-          <div style="font-size:11px;color:#770000;letter-spacing:2px;margin-bottom:10px;font-weight:700">ТАБЛИЦЯ ВИПЛАТ</div>
-          <div class="pay-row"><span class="pay-combo">💀💀💀</span><span class="pay-mult">x 10</span><span class="pay-desc">Джекпот!</span></div>
-          <div class="pay-row"><span class="pay-combo">🩸🩸🩸</span><span class="pay-mult">x 5</span><span class="pay-desc">Кривавий потік</span></div>
-          <div class="pay-row"><span class="pay-combo">🔥🔥🔥</span><span class="pay-mult">x 4</span><span class="pay-desc">Пекло</span></div>
-          <div class="pay-row"><span class="pay-combo">⚡⚡⚡</span><span class="pay-mult">x 3</span><span class="pay-desc">Удар долі</span></div>
-          <div class="pay-row"><span class="pay-combo">💎💎💎</span><span class="pay-mult">x 8</span><span class="pay-desc">Діамантовий удар</span></div>
-          <div class="pay-row"><span class="pay-combo">Будь-які 2 однак.</span><span class="pay-mult">x 1.5</span><span class="pay-desc">Мала перемога</span></div>
-          <div class="pay-row" style="border:none"><span class="pay-combo">Нічого</span><span class="pay-mult">x 0</span><span class="pay-desc">Спробуй ще</span></div>
+          <button onclick="closeCaseOpener()" style="width:100%;padding:10px;background:none;border:1px solid #1a0000;border-radius:8px;color:#330000;font-family:'Courier New',monospace;font-size:12px;cursor:pointer;margin-top:8px;touch-action:manipulation">← Назад</button>
         </div>
 
         <!-- STATS -->
         <div style="background:#0f0000;border:1px solid #330000;border-radius:10px;padding:14px">
-          <div style="font-size:11px;color:#770000;letter-spacing:2px;margin-bottom:8px;font-weight:700">ТВОЯ СТАТИСТИКА</div>
+          <div style="font-size:11px;color:#770000;letter-spacing:2px;margin-bottom:8px;font-weight:700">СТАТИСТИКА</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div class="as"><div class="as-l">СПІНІВ</div><div class="as-v" id="stat-spins">0</div></div>
-            <div class="as"><div class="as-l">ВИГРАШІВ</div><div class="as-v" id="stat-wins">0</div></div>
-            <div class="as"><div class="as-l">ЗАРОБЛЕНО</div><div class="as-v" id="stat-earned">0</div></div>
-            <div class="as"><div class="as-l">ПРОГРАНО</div><div class="as-v" id="stat-lost">0</div></div>
+            <div class="as"><div class="as-l">ВІДКРИТО</div><div class="as-v" id="case-stat-opened">0</div></div>
+            <div class="as"><div class="as-l">ЗАРОБЛЕНО</div><div class="as-v" id="case-stat-earned">0</div></div>
+            <div class="as"><div class="as-l">ВИТРАЧЕНО</div><div class="as-v" id="case-stat-spent">0</div></div>
+            <div class="as"><div class="as-l">НАЙКРАЩИЙ</div><div class="as-v" id="case-stat-best">-</div></div>
           </div>
         </div>
 
       </div>
-    </div>
-
-  </div>
+    </div> </div>
 
   <!-- BOTTOM NAV — завжди видимий -->
   <div id="bottom-nav">
     <div class="nav-item on" onclick="nav('main',this)"><span class="nav-ico">☠</span><span class="nav-lbl">Кров</span></div>
     <div class="nav-item" onclick="nav('upgrade',this)"><span class="nav-ico">↗</span><span class="nav-lbl">Прокачка</span></div>
     <div class="nav-item" onclick="nav('tasks',this)"><span class="nav-ico">📋</span><span class="nav-lbl">Завдання</span></div>
-    <div class="nav-item" onclick="nav('casino',this)"><span class="nav-ico">🎰</span><span class="nav-lbl">Казино</span></div>
+    <div class="nav-item" onclick="nav('cases',this)"><span class="nav-ico">📦</span><span class="nav-lbl">Кейси</span></div>
     <div class="nav-item" onclick="nav('lb',this)"><span class="nav-ico">🏆</span><span class="nav-lbl">Топ</span></div>
     <div class="nav-item" onclick="nav('rewards',this)"><span class="nav-ico">🎁</span><span class="nav-lbl">Нагороди</span></div>
   </div>
@@ -1200,16 +1173,802 @@ function buildDailyInTasks() {
   if (btn) btn.disabled = claimed;
 }
 
+// ══ CASES ══
+var CASES_DEF = [
+  {
+    id:'c1', name:'Нищета', icon:'💸', color:'#448800',
+    price:1899,
+    drops:[
+      {val:1000,  label:'1 000',  chance:35, rarity:'common'},
+      {val:1500,  label:'1 500',  chance:25, rarity:'common'},
+      {val:2000,  label:'2 000',  chance:20, rarity:'common'},
+      {val:3000,  label:'3 000',  chance:10, rarity:'rare'},
+      {val:4000,  label:'4 000',  chance:7,  rarity:'rare'},
+      {val:5000,  label:'5 000',  chance:3,  rarity:'epic'}
+    ]
+  },
+  {
+    id:'c2', name:'Кривавий', icon:'🩸', color:'#cc0000',
+    price:10000,
+    drops:[
+      {val:5000,   label:'5 000',   chance:45,  rarity:'common'},
+      {val:8000,   label:'8 000',   chance:25,  rarity:'common'},
+      {val:12000,  label:'12 000',  chance:12,  rarity:'rare'},
+      {val:20000,  label:'20 000',  chance:7,   rarity:'rare'},
+      {val:30000,  label:'30 000',  chance:4,   rarity:'epic'},
+      {val:40000,  label:'40 000',  chance:3,   rarity:'epic'},
+      {val:50000,  label:'50 000',  chance:2,   rarity:'epic'},
+      {val:100000, label:'100 000', chance:1.9, rarity:'epic'},
+      {val:0,      label:'🎁 Іграшка',chance:0.1,rarity:'prize',prize:true}
+    ]
+  },
+  {
+    id:'c3', name:'Painspire', icon:'💀', color:'#9900cc',
+    price:200000,
+    drops:[
+      {val:50000,  label:'50 000',  chance:32, rarity:'common'},
+      {val:100000, label:'100 000', chance:20, rarity:'rare'},
+      {val:150000, label:'150 000', chance:14, rarity:'rare'},
+      {val:300000, label:'300 000', chance:12, rarity:'epic'},
+      {val:500000, label:'500 000', chance:10, rarity:'epic'},
+      {val:0,      label:'👕 Футболка',chance:12,rarity:'prize',prize:true}
+    ]
+  }
+];
+
+var caseStats = {opened:0, earned:0, spent:0, best:0};
+var currentCase = null;
+var caseSpinning = false;
+
+function loadCaseStats(){
+  try{var s=JSON.parse(localStorage.getItem('ps_cases')||'{}');
+    if(s.opened)caseStats.opened=s.opened;if(s.earned)caseStats.earned=s.earned;
+    if(s.spent)caseStats.spent=s.spent;if(s.best)caseStats.best=s.best;
+  }catch(e){}
+}
+function saveCaseStats(){try{localStorage.setItem('ps_cases',JSON.stringify(caseStats));}catch(e){}}
+
+function updateCaseStatsUI(){
+  var o=document.getElementById('case-stat-opened'),e=document.getElementById('case-stat-earned');
+  var s=document.getElementById('case-stat-spent'),b=document.getElementById('case-stat-best');
+  if(o)o.textContent=caseStats.opened;
+  if(e)e.textContent=fmt(caseStats.earned);
+  if(s)s.textContent=fmt(caseStats.spent);
+  if(b)b.textContent=caseStats.best>0?fmt(caseStats.best):(caseStats.best===-1?'Іграшка':'Футболка')||'-';
+}
+
+function buildCaseCards(){
+  var el=document.getElementById('case-cards');if(!el)return;
+  el.innerHTML='';
+  CASES_DEF.forEach(function(cas){
+    var d=document.createElement('div');d.className='case-card';
+    var dropsHtml='';
+    // Show top drops
+    var sorted=[].concat(cas.drops).sort(function(a,b){return b.val-a.val;});
+    sorted.slice(0,5).forEach(function(dr){
+      dropsHtml+='<span class="drop-pill '+dr.rarity+'">'+dr.label+'</span>';
+    });
+    d.innerHTML=
+      '<div class="case-card-header">'+
+        '<span class="case-icon">'+cas.icon+'</span>'+
+        '<div>'+
+          '<div class="case-name" style="color:'+cas.color+'">'+cas.name+'</div>'+
+          '<div class="case-price">'+fmt(cas.price)+' болю</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="case-drops">'+dropsHtml+'</div>'+
+      '<button class="open-case-btn" onclick="selectCase(&quot;'+cas.id+'&quot;)">📦 ВІДКРИТИ КЕЙС</button>';
+    el.appendChild(d);
+  });
+  updateCaseStatsUI();
+}
+
+function selectCase(id){
+  var cas=CASES_DEF.find(function(x){return x.id===id;});if(!cas)return;
+  if(G.pain<cas.price){toast('Мало болю! Потрібно '+fmt(cas.price));return;}
+  currentCase=cas;
+  document.getElementById('case-cards').style.display='none';
+  document.getElementById('case-opener').style.display='block';
+  document.getElementById('opener-title').textContent=cas.icon+' КЕЙС "'+cas.name.toUpperCase()+'" — '+fmt(cas.price)+' болю';
+  document.getElementById('case-result').textContent='';
+  document.getElementById('case-spin-btn').disabled=false;
+  document.getElementById('case-spin-btn').textContent='📦 ВІДКРИТИ';
+  // Pre-fill strip
+  buildStrip(cas, null);
+}
+
+function closeCaseOpener(){
+  document.getElementById('case-opener').style.display='none';
+  document.getElementById('case-cards').style.display='block';
+  currentCase=null;
+  updateCaseStatsUI();
+}
+
+// Roll weighted drop
+function rollDrop(cas){
+  var r=Math.random()*100;
+  var cum=0;
+  for(var i=0;i<cas.drops.length;i++){
+    cum+=cas.drops[i].chance;
+    if(r<cum)return cas.drops[i];
+  }
+  return cas.drops[cas.drops.length-1];
+}
+
+// Build strip of items
+function buildStrip(cas, finalDrop){
+  var strip=document.getElementById('case-strip');
+  if(!strip)return;
+  strip.innerHTML='';
+  strip.style.transition='none';
+  strip.style.transform='translateX(0)';
+
+  var items=[];
+  // 60 random items + near-miss + final
+  for(var i=0;i<58;i++){
+    var d=rollDrop(cas);
+    // Near-miss psychology: insert rare item at positions 54-56
+    if(i===54){
+      // Find a rare/epic drop
+      var rare=cas.drops.filter(function(d){return d.rarity==='epic'||d.rarity==='prize';});
+      if(rare.length>0)d=rare[Math.floor(Math.random()*rare.length)];
+    }
+    items.push(d);
+  }
+  // Position 59 = actual result (will be set in openCase)
+  items.push(finalDrop||cas.drops[0]);
+
+  items.forEach(function(drop,idx){
+    var el=document.createElement('div');
+    el.className='strip-item '+drop.rarity;
+    el.innerHTML=
+      '<span class="strip-item-ico">'+(drop.prize?drop.label.split(' ')[0]:'💊')+'</span>'+
+      '<span class="strip-item-val" style="color:'+(
+        drop.rarity==='prize'?'#ffaa00':
+        drop.rarity==='epic'?'#00aa66':
+        drop.rarity==='rare'?'#9933cc':'#cc5555'
+      )+'">'+drop.label+'</span>';
+    strip.appendChild(el);
+  });
+}
+
+function openCase(){
+  if(!currentCase||caseSpinning)return;
+  if(G.pain<currentCase.price){toast('Мало болю!');return;}
+  caseSpinning=true;
+  var btn=document.getElementById('case-spin-btn');
+  btn.disabled=true;btn.textContent='⏳ ВІДКРИВАЄТЬСЯ...';
+  document.getElementById('case-result').textContent='';
+
+  G.pain-=currentCase.price;
+  caseStats.spent+=currentCase.price;
+  updateHUD();
+
+  var result=rollDrop(currentCase);
+
+  // Rebuild strip with result at end
+  buildStrip(currentCase, result);
+
+  var strip=document.getElementById('case-strip');
+  var items=strip.children;
+  var itemW=92; // 86px + 6px gap
+  var totalItems=items.length;
+  var finalIdx=totalItems-1;
+  var containerW=document.getElementById('case-strip').parentElement.offsetWidth;
+  var centerOffset=containerW/2-itemW/2;
+
+  // Target: scroll so final item is centered
+  var targetX=-(finalIdx*itemW-centerOffset);
+
+  // Phase 1: fast scroll (items 0-50)
+  var phase1Target=-(48*itemW-centerOffset);
+  strip.style.transition='transform 2.5s cubic-bezier(0.12,0.8,0.32,1)';
+  strip.style.transform='translateX('+phase1Target+'px)';
+
+  // Phase 2: slow down to final (near-miss visible)
+  setTimeout(function(){
+    var phase2Target=-(54*itemW-centerOffset);
+    strip.style.transition='transform 1.2s cubic-bezier(0.4,0,0.8,0.6)';
+    strip.style.transform='translateX('+phase2Target+'px)';
+  },2600);
+
+  // Phase 3: final crawl to result
+  setTimeout(function(){
+    strip.style.transition='transform 1.8s cubic-bezier(0.0,0.0,0.1,1.0)';
+    strip.style.transform='translateX('+targetX+'px)';
+  },3900);
+
+  // Show result
+  setTimeout(function(){
+    showCaseResult(result);
+    // Highlight winner
+    var lastItem=items[totalItems-1];
+    if(lastItem)lastItem.className='strip-item '+result.rarity+' win';
+    lastItem.style.animation='stripWin .4s ease infinite alternate';
+    caseSpinning=false;
+    btn.disabled=false;
+    btn.textContent='📦 ВІДКРИТИ ЩЕ РАЗ';
+  },5800);
+}
+
+function showCaseResult(drop){
+  var resEl=document.getElementById('case-result');
+  caseStats.opened++;
+
+  if(drop.prize){
+    caseStats.best=-1;
+    resEl.innerHTML='<span style="color:#ffaa00;font-size:18px">🎁 ПРИЗ! '+drop.label+'!</span>';
+    vibrate([50,20,50,20,100,20,100]);
+    if(G.effectsOn){
+      for(var i=0;i<6;i++){(function(d){setTimeout(function(){
+        var fl=document.createElement('div');fl.className='flash-el';
+        fl.style.background='rgba(200,150,0,0.2)';
+        document.getElementById('app').appendChild(fl);
+        setTimeout(function(){if(fl.parentNode)fl.remove();},450);
+      },d*120);})(i);}
+    }
+    toast('🎁 Ти виграв реальний приз! Напиши нам 🔥');
+  } else {
+    G.pain+=drop.val;
+    caseStats.earned+=drop.val;
+    if(drop.val>caseStats.best)caseStats.best=drop.val;
+
+    if(drop.val>=300000){
+      resEl.innerHTML='<span style="color:#00ff88;font-size:18px">🔥 +'+fmt(drop.val)+' болю!</span>';
+      vibrate([40,15,40,15,80]);
+      if(G.effectsOn){
+        for(var i=0;i<4;i++){(function(d){setTimeout(function(){
+          var fl=document.createElement('div');fl.className='flash-el';
+          fl.style.background='rgba(0,200,100,0.1)';
+          document.getElementById('app').appendChild(fl);
+          setTimeout(function(){if(fl.parentNode)fl.remove();},450);
+        },d*130);})(i);}
+      }
+    } else if(drop.val>=50000){
+      resEl.innerHTML='<span style="color:#ff4444;font-size:16px">💥 +'+fmt(drop.val)+' болю!</span>';
+      vibrate([25,10,40]);
+    } else {
+      resEl.innerHTML='<span style="color:#cc4444">+'+fmt(drop.val)+' болю</span>';
+      vibrate(15);
+    }
+    updateHUD();
+  }
+
+  saveCaseStats();
+  updateCaseStatsUI();
+  dbSave();
+}
+
+
+// ══ TASKS ══
+var TASKS_DEF = [
+  {id:"task_taps_1k",   type:"taps",   target:1000,   reward:500,    title:"1 000 тапів",        desc:"Натисни кнопку 1 000 разів"},
+  {id:"task_taps_5k",   type:"taps",   target:5000,   reward:2000,   title:"5 000 тапів",         desc:"Натисни кнопку 5 000 разів"},
+  {id:"task_taps_20k",  type:"taps",   target:20000,  reward:8000,   title:"20 000 тапів",        desc:"Натисни кнопку 20 000 разів"},
+  {id:"task_taps_100k", type:"taps",   target:100000, reward:40000,  title:"100 000 тапів",       desc:"Натисни кнопку 100 000 разів"},
+  {id:"task_pain_10k",  type:"pain",   target:10000,  reward:1000,   title:"10К болю",            desc:"Назбирай 10 000 болю"},
+  {id:"task_pain_100k", type:"pain",   target:100000, reward:8000,   title:"100К болю",           desc:"Назбирай 100 000 болю"},
+  {id:"task_pain_1m",   type:"pain",   target:1000000,reward:50000,  title:"1М болю",             desc:"Назбирай 1 000 000 болю"},
+  {id:"task_lvl_5",     type:"lvl",    target:5,      reward:3000,   title:"Досягни рівня 5",     desc:"Підніміть свій рівень до 5"},
+  {id:"task_lvl_10",    type:"lvl",    target:10,     reward:10000,  title:"Досягни рівня 10",    desc:"Підніміть свій рівень до 10"},
+  {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
+  {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
+  {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
+  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
+  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
+  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+];
+
+// Task progress stored in G
+// G.taskProgress = {taps: N, claimed: ['task_id1',...]}
+
+function getTaskProgress(task) {
+  if (!G.taskProgress) G.taskProgress = {};
+  switch(task.type) {
+    case 'taps':   return G.taskProgress.taps || 0;
+    case 'pain':   return G.pain;
+    case 'lvl':    return G.lvl;
+    case 'streak': return G.streak;
+    case 'spins':  return casinoStats.spins;
+    case 'cwins':  return casinoStats.wins;
+    default: return 0;
+  }
+}
+
+function buildTasks() {
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  var list = document.getElementById('tasks-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Also rebuild daily
+  buildDailyInTasks();
+
+  TASKS_DEF.forEach(function(task) {
+    var claimed = G.taskProgress.claimed && G.taskProgress.claimed.indexOf(task.id) >= 0;
+    var prog = getTaskProgress(task);
+    var pct = Math.min(100, Math.floor(prog / task.target * 100));
+    var done = prog >= task.target;
+    var canClaim = done && !claimed;
+
+    var d = document.createElement('div');
+    d.className = 'upg-card';
+    d.style.marginBottom = '10px';
+    d.innerHTML =
+      '<div class="upg-top">' +
+        '<span class="upg-name">' + task.title + '</span>' +
+        '<span class="upg-lv" style="color:#ff4444">+' + fmt(task.reward) + '</span>' +
+      '</div>' +
+      '<div class="upg-desc">' + task.desc + '</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+        '<span style="font-size:12px;color:#cc5555">' + fmt(prog) + ' / ' + fmt(task.target) + '</span>' +
+        '<span style="font-size:12px;color:#770000">' + pct + '%</span>' +
+      '</div>' +
+      '<div class="upg-bar-wrap"><div class="upg-bar" style="width:' + pct + '%"></div></div>' +
+      '<button class="upg-btn" ' + (claimed || !done ? 'disabled' : '') +
+        ' onclick="claimTask(&quot;' + task.id + '&quot;)">' +
+        (claimed ? '✓ ОТРИМАНО' : done ? 'ЗАБРАТИ НАГОРОДУ' : 'В ПРОЦЕСІ...') +
+      '</button>';
+    list.appendChild(d);
+  });
+}
+
+function claimTask(id) {
+  var task = TASKS_DEF.find(function(t){ return t.id === id; });
+  if (!task) return;
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  if (G.taskProgress.claimed.indexOf(id) >= 0) return;
+  var prog = getTaskProgress(task);
+  if (prog < task.target) return;
+  G.pain += task.reward;
+  G.taskProgress.claimed.push(id);
+  buildTasks();
+  updateHUD();
+  toast('Завдання виконано! +' + fmt(task.reward) + ' болю 🎯');
+  vibrate([20,10,40]);
+  dbSave();
+}
+
+function buildDailyInTasks() {
+  var grid = document.getElementById('daily-grid2');
+  var lbl = document.getElementById('claim-lbl2');
+  var btn = document.getElementById('claim-btn2');
+  if (!grid) return;
+  grid.innerHTML = '';
+  var today = new Date().toDateString();
+  var claimed = G.lastClaim === today;
+  DAILY_R.forEach(function(amt, i) {
+    var d = document.createElement('div');
+    d.className = 'day-box' + (i < G.streak ? ' done' : i === G.streak ? ' today' : '');
+    d.innerHTML = '<div class="day-num">'+(i+1)+'</div><div class="day-amt">+'+fmt(amt)+'</div>';
+    grid.appendChild(d);
+  });
+  var idx = Math.min(G.streak, DAILY_R.length-1);
+  if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
+  if (btn) btn.disabled = claimed;
+}
+
 // ══ CASINO ══
-var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤'];
-var PAYOUTS = {
-  '💀💀💀': 10,
-  '🩸🩸🩸': 5,
-  '🔥🔥🔥': 4,
-  '⚡⚡⚡': 3,
-  '💎💎💎': 8
-};
+var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤','😈','⚰️','🕸️'];
+// Weighted: rare symbols appear less
+var SYMBOL_WEIGHTS = [3,3,4,4,2,6,6,5,5,6]; // lower = rarer (💀=3, 💎=2)
+var PAYOUTS = {'💀💀💀':15,'💎💎💎':10,'🩸🩸🩸':6,'🔥🔥🔥':4,'⚡⚡⚡':3};
 var casinoBet = 100;
+var bjBet = 100;
+var casinoSpinning = false;
+var casinoStats = {spins:0, wins:0, earned:0, lost:0};
+
+function loadCasinoStats(){
+  try{var s=JSON.parse(localStorage.getItem('ps_casino')||'{}');
+    if(s.spins)casinoStats.spins=s.spins;
+    if(s.wins)casinoStats.wins=s.wins;
+    if(s.earned)casinoStats.earned=s.earned;
+    if(s.lost)casinoStats.lost=s.lost;
+  }catch(e){}
+}
+function saveCasinoStats(){try{localStorage.setItem('ps_casino',JSON.stringify(casinoStats));}catch(e){}}
+function updateCasinoStatsUI(){
+  var s=document.getElementById('stat-spins'),w=document.getElementById('stat-wins');
+  var e=document.getElementById('stat-earned'),l=document.getElementById('stat-lost');
+  if(s)s.textContent=casinoStats.spins;if(w)w.textContent=casinoStats.wins;
+  if(e)e.textContent=fmt(casinoStats.earned);if(l)l.textContent=fmt(casinoStats.lost);
+}
+
+function casinoTab(t){
+  document.getElementById('casino-slots').style.display=t==='slots'?'block':'none';
+  document.getElementById('casino-bj').style.display=t==='bj'?'block':'none';
+  document.getElementById('ctab-slots').style.background=t==='slots'?'#1f0000':'#0f0000';
+  document.getElementById('ctab-slots').style.color=t==='slots'?'#ff4444':'#550000';
+  document.getElementById('ctab-bj').style.background=t==='bj'?'#1f0000':'#0f0000';
+  document.getElementById('ctab-bj').style.color=t==='bj'?'#ff4444':'#550000';
+}
+
+function setBet(amount,el){
+  casinoBet=amount;
+  document.getElementById('current-bet-display').textContent=fmt(amount)+' болю';
+  document.querySelectorAll('#casino-slots .bet-btn').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+}
+function setCustomBet(){
+  var input=document.getElementById('custom-bet');
+  var val=parseInt(input.value)||0;
+  if(val<1){toast('Мінімум 1');return;}
+  casinoBet=val;
+  document.getElementById('current-bet-display').textContent=fmt(val)+' болю';
+  document.querySelectorAll('#casino-slots .bet-btn').forEach(function(b){b.classList.remove('active');});
+}
+
+// Weighted random symbol
+function randSymbol(){
+  var total=SYMBOL_WEIGHTS.reduce(function(a,b){return a+b;},0);
+  var r=Math.random()*total,cum=0;
+  for(var i=0;i<SYMBOLS.length;i++){cum+=SYMBOL_WEIGHTS[i];if(r<cum)return SYMBOLS[i];}
+  return SYMBOLS[0];
+}
+
+// Build reel track with symbols
+function buildReelTrack(trackId, finalSymbol){
+  var track=document.getElementById(trackId);
+  if(!track)return;
+  track.innerHTML='';
+  // 20 random symbols + final at bottom
+  var syms=[];
+  for(var i=0;i<20;i++)syms.push(randSymbol());
+  syms.push(finalSymbol);
+  syms.forEach(function(s){
+    var div=document.createElement('div');div.className='reel-symbol';div.textContent=s;
+    track.appendChild(div);
+  });
+  // Start at top
+  track.style.transition='none';
+  track.style.transform='translateY(0)';
+}
+
+function animateReel(trackId, duration, cb){
+  var track=document.getElementById(trackId);
+  if(!track)return;
+  var totalH=track.children.length*76;
+  var finalY=-(totalH-76); // show last symbol
+  track.style.transition='transform '+duration+'ms cubic-bezier(0.25,0.1,0.25,1)';
+  track.style.transform='translateY('+finalY+'px)';
+  setTimeout(cb||function(){},duration+50);
+}
+
+function spinSlots(){
+  if(casinoSpinning)return;
+  if(G.pain<casinoBet){toast('Мало болю!');return;}
+  casinoSpinning=true;
+  var btn=document.getElementById('spin-btn');
+  btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
+
+  G.pain-=casinoBet;
+  casinoStats.spins++;casinoStats.lost+=casinoBet;
+  updateHUD();
+
+  // Clear winners
+  [1,2,3].forEach(function(i){
+    var w=document.querySelector('.reel-wrap:nth-child('+i+')');
+    if(w)w.classList.remove('winner');
+  });
+  document.getElementById('casino-result').textContent='';
+
+  // Pick results with weighted random (biased toward loss)
+  // House edge ~85% loss rate
+  var loseRoll=Math.random();
+  var r1,r2,r3;
+  if(loseRoll<0.85){
+    // Force loss - all different
+    var pool=[...SYMBOLS];
+    r1=pool[Math.floor(Math.random()*pool.length)];
+    do{r2=pool[Math.floor(Math.random()*pool.length)];}while(r2===r1);
+    do{r3=pool[Math.floor(Math.random()*pool.length)];}while(r3===r1||r3===r2);
+  } else if(loseRoll<0.93){
+    // Pair (x1.5)
+    r1=randSymbol();r2=r1;
+    do{r3=randSymbol();}while(r3===r1);
+    // shuffle
+    var arr=[r1,r2,r3];arr.sort(function(){return Math.random()-0.5;});
+    r1=arr[0];r2=arr[1];r3=arr[2];
+  } else if(loseRoll<0.96){r1=r2=r3='⚡';} // x3
+  else if(loseRoll<0.98){r1=r2=r3='🔥';}   // x4
+  else if(loseRoll<0.99){r1=r2=r3='🩸';}   // x6
+  else if(loseRoll<0.997){r1=r2=r3='💎';}  // x10
+  else{r1=r2=r3='💀';}                      // x15 JACKPOT
+
+  // Build and animate reels
+  buildReelTrack('track-1',r1);
+  buildReelTrack('track-2',r2);
+  buildReelTrack('track-3',r3);
+
+  // Animate sequentially
+  setTimeout(function(){animateReel('track-1',900,null);},100);
+  setTimeout(function(){animateReel('track-2',1100,null);},300);
+  setTimeout(function(){animateReel('track-3',1300,function(){
+    setTimeout(function(){showSlotResult(r1,r2,r3);},200);
+  });},500);
+}
+
+function showSlotResult(r1,r2,r3){
+  var combo=r1+r2+r3;var mult=0;
+  if(PAYOUTS[combo])mult=PAYOUTS[combo];
+  else if(r1===r2||r2===r3||r1===r3)mult=1.5;
+
+  var resultEl=document.getElementById('casino-result');
+  // Highlight winners
+  var reelWraps=document.querySelectorAll('#casino-slots .reel-wrap');
+  if(mult>0){
+    var won=Math.floor(casinoBet*mult);
+    G.pain+=won;
+    casinoStats.wins++;casinoStats.earned+=won;casinoStats.lost-=casinoBet;
+    if(r1===r2){reelWraps[0]&&reelWraps[0].classList.add('winner');reelWraps[1]&&reelWraps[1].classList.add('winner');}
+    if(r2===r3){reelWraps[1]&&reelWraps[1].classList.add('winner');reelWraps[2]&&reelWraps[2].classList.add('winner');}
+    if(r1===r3){reelWraps[0]&&reelWraps[0].classList.add('winner');reelWraps[2]&&reelWraps[2].classList.add('winner');}
+    if(mult>=10){
+      resultEl.innerHTML='<span style="color:#ffdd00;font-size:16px">🏆 ДЖЕКПОТ! +'+fmt(won)+'</span>';
+      vibrate([50,20,50,20,100]);
+      if(G.effectsOn)for(var i=0;i<5;i++){(function(d){setTimeout(function(){var fl=document.createElement('div');fl.className='flash-el';fl.style.background='rgba(200,150,0,0.15)';document.getElementById('app').appendChild(fl);setTimeout(function(){if(fl.parentNode)fl.remove();},450);},d*150);})(i);}
+    } else if(mult>=4){
+      resultEl.innerHTML='<span style="color:#ff4444">🎉 ВИГРАШ! +'+fmt(won)+'</span>';vibrate([30,10,30]);
+    } else {
+      resultEl.innerHTML='<span style="color:#cc4444">✓ +'+fmt(won)+'</span>';vibrate(20);
+    }
+  } else {
+    resultEl.innerHTML='<span style="color:#330000">✗ Не пощастило</span>';
+  }
+
+  updateHUD();updateCasinoStatsUI();saveCasinoStats();dbSave();
+  var btn=document.getElementById('spin-btn');btn.disabled=false;btn.textContent='🎰 КРУТИТИ';
+  casinoSpinning=false;
+}
+
+// ══ BLACKJACK ══
+var BJ = {deck:[],player:[],dealer:[],state:'idle'};
+
+function bjCardValue(card){
+  var v=card.value;
+  if(v==='A')return 11;
+  if(['K','Q','J','10'].indexOf(v)>=0)return 10;
+  return parseInt(v);
+}
+
+function bjHandValue(hand){
+  var total=0,aces=0;
+  hand.forEach(function(c){
+    var v=bjCardValue(c);
+    if(c.value==='A')aces++;
+    total+=v;
+  });
+  while(total>21&&aces>0){total-=10;aces--;}
+  return total;
+}
+
+function bjBuildDeck(){
+  var suits=['♠','♥','♦','♣'];
+  var vals=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  var deck=[];
+  suits.forEach(function(s){vals.forEach(function(v){deck.push({suit:s,value:v,red:s==='♥'||s==='♦'});});});
+  // Shuffle
+  for(var i=deck.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=deck[i];deck[i]=deck[j];deck[j]=t;}
+  return deck;
+}
+
+function bjDraw(){return BJ.deck.pop();}
+
+function bjRenderCard(card,hidden){
+  var d=document.createElement('div');
+  if(hidden){d.className='card hidden';d.textContent='🂠';return d;}
+  d.className='card '+(card.red?'red':'black-c');
+  d.innerHTML='<span style="font-size:13px;line-height:1">'+card.value+'<br>'+card.suit+'</span>';
+  return d;
+}
+
+function bjRender(hideDealer){
+  var pc=document.getElementById('player-cards'),dc=document.getElementById('dealer-cards');
+  var ps=document.getElementById('player-score'),ds=document.getElementById('dealer-score');
+  if(!pc)return;
+  pc.innerHTML='';dc.innerHTML='';
+  BJ.player.forEach(function(c){pc.appendChild(bjRenderCard(c,false));});
+  BJ.dealer.forEach(function(c,i){dc.appendChild(bjRenderCard(c,hideDealer&&i===1));});
+  if(ps)ps.textContent=bjHandValue(BJ.player);
+  if(ds)ds.textContent=hideDealer?'?':bjHandValue(BJ.dealer);
+}
+
+function setBjBet(amount,el){
+  bjBet=amount;
+  var d=document.getElementById('bj-bet-display');if(d)d.textContent=fmt(amount);
+  document.querySelectorAll('#casino-bj .bet-btn').forEach(function(b){b.classList.remove('active');});
+  if(el)el.classList.add('active');
+}
+
+function bjDeal(){
+  if(G.pain<bjBet){toast('Мало болю!');return;}
+  G.pain-=bjBet;updateHUD();
+  BJ.deck=bjBuildDeck();BJ.player=[];BJ.dealer=[];
+  BJ.player.push(bjDraw());BJ.dealer.push(bjDraw());
+  BJ.player.push(bjDraw());BJ.dealer.push(bjDraw());
+  BJ.state='playing';
+  document.getElementById('bj-result').textContent='';
+  document.getElementById('bj-deal').disabled=true;
+  document.getElementById('bj-hit').disabled=false;
+  document.getElementById('bj-stand').disabled=false;
+  bjRender(true);
+  // Check blackjack
+  if(bjHandValue(BJ.player)===21){bjStand();}
+}
+
+function bjHit(){
+  if(BJ.state!=='playing')return;
+  BJ.player.push(bjDraw());
+  bjRender(true);
+  if(bjHandValue(BJ.player)>21)bjEnd('bust');
+  else if(bjHandValue(BJ.player)===21)bjStand();
+}
+
+function bjStand(){
+  if(BJ.state!=='playing'&&BJ.state!=='idle')return;
+  BJ.state='dealer';
+  bjRender(false);
+  // Dealer draws to 17
+  var drawNext=function(){
+    if(bjHandValue(BJ.dealer)<17){
+      setTimeout(function(){
+        BJ.dealer.push(bjDraw());bjRender(false);drawNext();
+      },500);
+    } else {bjEnd('stand');}
+  };
+  drawNext();
+}
+
+function bjEnd(reason){
+  BJ.state='done';
+  document.getElementById('bj-hit').disabled=true;
+  document.getElementById('bj-stand').disabled=true;
+  document.getElementById('bj-deal').disabled=false;
+  bjRender(false);
+  var pv=bjHandValue(BJ.player),dv=bjHandValue(BJ.dealer);
+  var res=document.getElementById('bj-result');
+  var isBlackjack=BJ.player.length===2&&pv===21;
+  if(reason==='bust'){
+    res.innerHTML='<span style="color:#440000">💀 Перебір! Програш</span>';
+    casinoStats.spins++;casinoStats.lost+=bjBet;
+  } else if(dv>21){
+    var won=Math.floor(bjBet*2);G.pain+=won;
+    res.innerHTML='<span style="color:#ff4444">✓ Дилер перебрав! +'+fmt(won)+'</span>';
+    casinoStats.wins++;casinoStats.earned+=won;vibrate([20,10,30]);
+  } else if(isBlackjack&&pv>dv){
+    var won=Math.floor(bjBet*2.5);G.pain+=won;
+    res.innerHTML='<span style="color:#ffdd00">🃏 БЛЕКДЖЕК! +'+fmt(won)+'</span>';
+    casinoStats.wins++;casinoStats.earned+=won;vibrate([30,10,30,10,50]);
+  } else if(pv>dv){
+    var won=Math.floor(bjBet*2);G.pain+=won;
+    res.innerHTML='<span style="color:#ff4444">✓ Перемога! +'+fmt(won)+'</span>';
+    casinoStats.wins++;casinoStats.earned+=won;vibrate([20,10,30]);
+  } else if(pv===dv){
+    G.pain+=bjBet;
+    res.innerHTML='<span style="color:#770000">≈ Нічия. Ставку повернено</span>';
+  } else {
+    res.innerHTML='<span style="color:#330000">✗ Програш. Дилер виграв</span>';
+    casinoStats.spins++;casinoStats.lost+=bjBet;
+  }
+  updateHUD();updateCasinoStatsUI();saveCasinoStats();dbSave();
+}
+
+
+// ══ TASKS ══
+var TASKS_DEF = [
+  {id:"task_taps_1k",   type:"taps",   target:1000,   reward:500,    title:"1 000 тапів",        desc:"Натисни кнопку 1 000 разів"},
+  {id:"task_taps_5k",   type:"taps",   target:5000,   reward:2000,   title:"5 000 тапів",         desc:"Натисни кнопку 5 000 разів"},
+  {id:"task_taps_20k",  type:"taps",   target:20000,  reward:8000,   title:"20 000 тапів",        desc:"Натисни кнопку 20 000 разів"},
+  {id:"task_taps_100k", type:"taps",   target:100000, reward:40000,  title:"100 000 тапів",       desc:"Натисни кнопку 100 000 разів"},
+  {id:"task_pain_10k",  type:"pain",   target:10000,  reward:1000,   title:"10К болю",            desc:"Назбирай 10 000 болю"},
+  {id:"task_pain_100k", type:"pain",   target:100000, reward:8000,   title:"100К болю",           desc:"Назбирай 100 000 болю"},
+  {id:"task_pain_1m",   type:"pain",   target:1000000,reward:50000,  title:"1М болю",             desc:"Назбирай 1 000 000 болю"},
+  {id:"task_lvl_5",     type:"lvl",    target:5,      reward:3000,   title:"Досягни рівня 5",     desc:"Підніміть свій рівень до 5"},
+  {id:"task_lvl_10",    type:"lvl",    target:10,     reward:10000,  title:"Досягни рівня 10",    desc:"Підніміть свій рівень до 10"},
+  {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
+  {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
+  {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
+  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
+  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
+  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+];
+
+// Task progress stored in G
+// G.taskProgress = {taps: N, claimed: ['task_id1',...]}
+
+function getTaskProgress(task) {
+  if (!G.taskProgress) G.taskProgress = {};
+  switch(task.type) {
+    case 'taps':   return G.taskProgress.taps || 0;
+    case 'pain':   return G.pain;
+    case 'lvl':    return G.lvl;
+    case 'streak': return G.streak;
+    case 'spins':  return casinoStats.spins;
+    case 'cwins':  return casinoStats.wins;
+    default: return 0;
+  }
+}
+
+function buildTasks() {
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  var list = document.getElementById('tasks-list');
+  if (!list) return;
+  list.innerHTML = '';
+
+  // Also rebuild daily
+  buildDailyInTasks();
+
+  TASKS_DEF.forEach(function(task) {
+    var claimed = G.taskProgress.claimed && G.taskProgress.claimed.indexOf(task.id) >= 0;
+    var prog = getTaskProgress(task);
+    var pct = Math.min(100, Math.floor(prog / task.target * 100));
+    var done = prog >= task.target;
+    var canClaim = done && !claimed;
+
+    var d = document.createElement('div');
+    d.className = 'upg-card';
+    d.style.marginBottom = '10px';
+    d.innerHTML =
+      '<div class="upg-top">' +
+        '<span class="upg-name">' + task.title + '</span>' +
+        '<span class="upg-lv" style="color:#ff4444">+' + fmt(task.reward) + '</span>' +
+      '</div>' +
+      '<div class="upg-desc">' + task.desc + '</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+        '<span style="font-size:12px;color:#cc5555">' + fmt(prog) + ' / ' + fmt(task.target) + '</span>' +
+        '<span style="font-size:12px;color:#770000">' + pct + '%</span>' +
+      '</div>' +
+      '<div class="upg-bar-wrap"><div class="upg-bar" style="width:' + pct + '%"></div></div>' +
+      '<button class="upg-btn" ' + (claimed || !done ? 'disabled' : '') +
+        ' onclick="claimTask(&quot;' + task.id + '&quot;)">' +
+        (claimed ? '✓ ОТРИМАНО' : done ? 'ЗАБРАТИ НАГОРОДУ' : 'В ПРОЦЕСІ...') +
+      '</button>';
+    list.appendChild(d);
+  });
+}
+
+function claimTask(id) {
+  var task = TASKS_DEF.find(function(t){ return t.id === id; });
+  if (!task) return;
+  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
+  if (G.taskProgress.claimed.indexOf(id) >= 0) return;
+  var prog = getTaskProgress(task);
+  if (prog < task.target) return;
+  G.pain += task.reward;
+  G.taskProgress.claimed.push(id);
+  buildTasks();
+  updateHUD();
+  toast('Завдання виконано! +' + fmt(task.reward) + ' болю 🎯');
+  vibrate([20,10,40]);
+  dbSave();
+}
+
+function buildDailyInTasks() {
+  var grid = document.getElementById('daily-grid2');
+  var lbl = document.getElementById('claim-lbl2');
+  var btn = document.getElementById('claim-btn2');
+  if (!grid) return;
+  grid.innerHTML = '';
+  var today = new Date().toDateString();
+  var claimed = G.lastClaim === today;
+  DAILY_R.forEach(function(amt, i) {
+    var d = document.createElement('div');
+    d.className = 'day-box' + (i < G.streak ? ' done' : i === G.streak ? ' today' : '');
+    d.innerHTML = '<div class="day-num">'+(i+1)+'</div><div class="day-amt">+'+fmt(amt)+'</div>';
+    grid.appendChild(d);
+  });
+  var idx = Math.min(G.streak, DAILY_R.length-1);
+  if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
+  if (btn) btn.disabled = claimed;
+}
+
+// ══ CASINO ══
+var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤','😈','⚰️','🕸️'];
+// Weighted: rare symbols appear less
+var SYMBOL_WEIGHTS = [3,3,4,4,2,6,6,5,5,6]; // lower = rarer (💀=3, 💎=2)
+var PAYOUTS = {'💀💀💀':15,'💎💎💎':10,'🩸🩸🩸':6,'🔥🔥🔥':4,'⚡⚡⚡':3};
+var casinoBet = 100;
+var bjBet = 100;
 var casinoSpinning = false;
 var casinoStats = {spins:0, wins:0, earned:0, lost:0};
 
@@ -1365,7 +2124,7 @@ function nav(page,el){
   if(page==='daily')buildDaily();
   if(page==='lb')buildLB();
   if(page==='rewards')buildRewards();
-  if(page==='casino')updateCasinoStatsUI();
+  if(page==='cases'){buildCaseCards();}
   if(page==='tasks')buildTasks();
 }
 
@@ -1411,14 +2170,15 @@ async function init(){
       if(u&&u.id){G.tgId=u.id;G.username=u.first_name||u.username||'Гравець';await dbLoad();}
     }
   }catch(e){console.log('init:',e);}
-  // If nextLvlAt not set, recalculate from level
-  if(!G.nextLvlAt || G.nextLvlAt < G.pain) {
-    var nla = 0;
-    for(var ri=1;ri<=G.lvl;ri++) nla += ri*1000;
-    G.nextLvlAt = nla;
+  // ALWAYS recalculate level from pain (fixes manual DB edits)
+  {
+    var cl=1, cn=1000;
+    while(G.pain>=cn){cl++;cn+=cl*1000;}
+    G.lvl=Math.max(G.lvl,cl);
+    G.nextLvlAt=cn;
   }
   loadSettings();
-  loadCasinoStats();
+  loadCaseStats();
   recalc();startRegen();updateHUD();
   document.getElementById('loading').style.display='none';
 }
