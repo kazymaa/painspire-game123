@@ -401,8 +401,8 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
 </div>
 
 <script>
-var SB_URL = 'https://gjsqfiwawyqxnabvkljy.supabase.co';
-var SB_KEY = 'sb_publishable_JrfS1j_n1jQEQg6GkmYBmQ_M5VPFfnQ';
+var SB_URL = 'https://uzhtrohzyejnczpbolhq.supabase.co';
+var SB_KEY = 'sb_publishable_hG_x48q0-vf3ERWk66uyrg_ztJ1Ii1R';
 var sb = supabase.createClient(SB_URL, SB_KEY);
 
 // ══ CONFIG ══
@@ -922,7 +922,7 @@ function claimDaily(){
 }
 
 // ══ SETTINGS ══
-function openSettings(){document.getElementById('settings-panel').classList.add('open');renderSP();}
+function openSettings(){document.getElementById('settings-panel').classList.add('open');renderSP();setTimeout(showPrizeCards,100);}
 function closeSettings(){document.getElementById('settings-panel').classList.remove('open');}
 
 function renderSP(){
@@ -1182,12 +1182,12 @@ var CASES_DEF = [
     id:'c1', name:'Нищета', icon:'💸', color:'#448800',
     price:1899,
     drops:[
-      {val:1000,  label:'1 000',  chance:35, rarity:'common'},
-      {val:1500,  label:'1 500',  chance:25, rarity:'common'},
-      {val:2000,  label:'2 000',  chance:20, rarity:'common'},
-      {val:3000,  label:'3 000',  chance:10, rarity:'rare'},
-      {val:4000,  label:'4 000',  chance:7,  rarity:'rare'},
-      {val:5000,  label:'5 000',  chance:3,  rarity:'epic'}
+      {val:1000, label:'1 000', chance:35, rarity:'common'},
+      {val:1500, label:'1 500', chance:25, rarity:'common'},
+      {val:2000, label:'2 000', chance:20, rarity:'common'},
+      {val:3000, label:'3 000', chance:10, rarity:'rare'},
+      {val:4000, label:'4 000', chance:7,  rarity:'rare'},
+      {val:5000, label:'5 000', chance:3,  rarity:'epic'}
     ]
   },
   {
@@ -1202,7 +1202,7 @@ var CASES_DEF = [
       {val:40000,  label:'40 000',  chance:3,   rarity:'epic'},
       {val:50000,  label:'50 000',  chance:2,   rarity:'epic'},
       {val:100000, label:'100 000', chance:1.9, rarity:'epic'},
-      {val:0,      label:'🎁 Іграшка',chance:0.1,rarity:'prize',prize:true}
+      {val:0, label:'🎁 Іграшка', chance:0.1, rarity:'prize', prize:true, prizeId:'toy'}
     ]
   },
   {
@@ -1214,7 +1214,7 @@ var CASES_DEF = [
       {val:150000, label:'150 000', chance:14, rarity:'rare'},
       {val:300000, label:'300 000', chance:12, rarity:'epic'},
       {val:500000, label:'500 000', chance:10, rarity:'epic'},
-      {val:0,      label:'👕 Acne Studio',chance:12,rarity:'prize',prize:true}
+      {val:0, label:'👕 Acne Studio', chance:12, rarity:'prize', prize:true, prizeId:'shirt'}
     ]
   }
 ];
@@ -1304,94 +1304,89 @@ function buildStrip(cas, finalDrop){
   if(!strip)return;
   strip.innerHTML='';
   strip.style.transition='none';
-  strip.style.transform='translateX(0)';
-
-  var items=[];
-  // 60 random items + near-miss + final
-  for(var i=0;i<58;i++){
-    var d=rollDrop(cas);
-    // Near-miss psychology: insert rare item at positions 54-56
-    if(i===54){
-      // Find a rare/epic drop
-      var rare=cas.drops.filter(function(d){return d.rarity==='epic'||d.rarity==='prize';});
-      if(rare.length>0)d=rare[Math.floor(Math.random()*rare.length)];
+  strip.style.transform='translateX(0px)';
+  var WIN_IDX=45;
+  for(var i=0;i<60;i++){
+    var drop;
+    if(i===WIN_IDX){
+      drop=finalDrop;
+    } else if(finalDrop.rarity==='common'&&(i===WIN_IDX-1||i===WIN_IDX+1)){
+      var rares=cas.drops.filter(function(d){return d.rarity==='epic'||d.rarity==='prize';});
+      drop=rares.length>0?rares[Math.floor(Math.random()*rares.length)]:rollDrop(cas);
+    } else {
+      drop=rollDrop(cas);
     }
-    items.push(d);
-  }
-  // Position 59 = actual result (will be set in openCase)
-  items.push(finalDrop||cas.drops[0]);
-
-  items.forEach(function(drop,idx){
     var el=document.createElement('div');
     el.className='strip-item '+drop.rarity;
-    el.innerHTML=
-      '<span class="strip-item-ico">'+(drop.prize?drop.label.split(' ')[0]:'💊')+'</span>'+
-      '<span class="strip-item-val" style="color:'+(
-        drop.rarity==='prize'?'#ffaa00':
-        drop.rarity==='epic'?'#00aa66':
-        drop.rarity==='rare'?'#9933cc':'#cc5555'
-      )+'">'+drop.label+'</span>';
+    var ico=drop.prize?drop.label.split(' ')[0]:
+      drop.rarity==='epic'?'💎':drop.rarity==='rare'?'🔴':'⚫';
+    var col=drop.rarity==='prize'?'#ffaa00':
+      drop.rarity==='epic'?'#00cc66':
+      drop.rarity==='rare'?'#aa44ff':'#cc4444';
+    el.innerHTML='<span class="strip-item-ico">'+ico+'</span>'+
+      '<span class="strip-item-val" style="color:'+col+'">'+drop.label+'</span>';
     strip.appendChild(el);
-  });
+  }
 }
 
 function openCase(){
   if(!currentCase||caseSpinning)return;
-  if(G.pain<currentCase.price){toast('Мало болю!');return;}
+  if(G.pain<currentCase.price){toast('Мало болю! Потрібно '+fmt(currentCase.price));return;}
   caseSpinning=true;
   var btn=document.getElementById('case-spin-btn');
-  btn.disabled=true;btn.textContent='⏳ ВІДКРИВАЄТЬСЯ...';
+  btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
   document.getElementById('case-result').textContent='';
 
   G.pain-=currentCase.price;
   caseStats.spent+=currentCase.price;
   updateHUD();
+  try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
 
   var result=rollDrop(currentCase);
-
-  // Rebuild strip with result at end
-  buildStrip(currentCase, result);
+  buildStrip(currentCase,result);
 
   var strip=document.getElementById('case-strip');
-  var items=strip.children;
-  var itemW=92; // 86px + 6px gap
-  var totalItems=items.length;
-  var finalIdx=totalItems-1;
-  var containerW=document.getElementById('case-strip').parentElement.offsetWidth;
-  var centerOffset=containerW/2-itemW/2;
+  var container=strip.parentElement;
+  var containerW=container.offsetWidth||300;
+  var ITEM_W=92;
+  var WIN_IDX=45;
+  var centerOffset=containerW/2-ITEM_W/2;
+  var randOffset=(Math.random()*20-10);
+  var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // Target: scroll so final item is centered
-  var targetX=-(finalIdx*itemW-centerOffset);
+  // Phase 1: fast launch
+  strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
+  strip.style.transform='translateX('+(-(22*ITEM_W-centerOffset))+'px)';
 
-  // Phase 1: fast scroll (items 0-50)
-  var phase1Target=-(48*itemW-centerOffset);
-  strip.style.transition='transform 2.5s cubic-bezier(0.12,0.8,0.32,1)';
-  strip.style.transform='translateX('+phase1Target+'px)';
-
-  // Phase 2: slow down to final (near-miss visible)
+  // Phase 2: full speed
   setTimeout(function(){
-    var phase2Target=-(54*itemW-centerOffset);
-    strip.style.transition='transform 1.2s cubic-bezier(0.4,0,0.8,0.6)';
-    strip.style.transform='translateX('+phase2Target+'px)';
-  },2600);
+    strip.style.transition='transform 0.7s linear';
+    strip.style.transform='translateX('+(-(36*ITEM_W-centerOffset))+'px)';
+  },950);
 
-  // Phase 3: final crawl to result
+  // Phase 3: decelerate
   setTimeout(function(){
-    strip.style.transition='transform 1.8s cubic-bezier(0.0,0.0,0.1,1.0)';
+    strip.style.transition='transform 0.8s cubic-bezier(0.5,0.0,0.9,0.4)';
+    strip.style.transform='translateX('+(-(41*ITEM_W-centerOffset))+'px)';
+  },1700);
+
+  // Phase 4: CS:GO slow crawl
+  setTimeout(function(){
+    strip.style.transition='transform 2.6s cubic-bezier(0.0,0.0,0.05,1.0)';
     strip.style.transform='translateX('+targetX+'px)';
-  },3900);
+  },2550);
 
   // Show result
   setTimeout(function(){
-    showCaseResult(result);
-    // Highlight winner
-    var lastItem=items[totalItems-1];
-    if(lastItem)lastItem.className='strip-item '+result.rarity+' win';
-    lastItem.style.animation='stripWin .4s ease infinite alternate';
-    caseSpinning=false;
-    btn.disabled=false;
-    btn.textContent='📦 ВІДКРИТИ ЩЕ РАЗ';
-  },5800);
+    var winEl=strip.children[WIN_IDX];
+    if(winEl)winEl.className='strip-item '+result.rarity+' win';
+    setTimeout(function(){
+      showCaseResult(result);
+      caseSpinning=false;
+      btn.disabled=false;
+      btn.textContent='📦 ВІДКРИТИ ЩЕ РАЗ';
+    },500);
+  },5250);
 }
 
 function showCaseResult(drop){
@@ -1400,17 +1395,34 @@ function showCaseResult(drop){
 
   if(drop.prize){
     caseStats.best=-1;
-    resEl.innerHTML='<span style="color:#ffaa00;font-size:18px">🎁 ПРИЗ! '+drop.label+'!</span>';
+    // Save prize card
+    var prizeCard={
+      id: drop.prizeId||'prize',
+      label: drop.label,
+      caseId: currentCase.id,
+      caseName: currentCase.name,
+      date: new Date().toLocaleDateString('uk'),
+      tgId: G.tgId,
+      username: G.username
+    };
+    try{
+      var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
+      cards.push(prizeCard);
+      localStorage.setItem('ps_prize_cards',JSON.stringify(cards));
+    }catch(e){}
+    // Show prize card overlay
+    showPrizeCard(prizeCard);
+    resEl.innerHTML='<span style="color:#ffaa00;font-size:18px">🎁 ЛЕГЕНДАРНИЙ ПРИЗ!</span>';
     vibrate([50,20,50,20,100,20,100]);
     if(G.effectsOn){
-      for(var i=0;i<6;i++){(function(d){setTimeout(function(){
+      for(var i=0;i<8;i++){(function(d){setTimeout(function(){
         var fl=document.createElement('div');fl.className='flash-el';
-        fl.style.background='rgba(200,150,0,0.2)';
+        fl.style.background='rgba(200,150,0,0.18)';
         document.getElementById('app').appendChild(fl);
         setTimeout(function(){if(fl.parentNode)fl.remove();},450);
       },d*120);})(i);}
     }
-    toast('🎁 Ти виграв реальний приз! Напиши нам 🔥');
+    toast('🎁 Ти виграв реальний приз! Напиши нам!');
   } else {
     G.pain+=drop.val;
     caseStats.earned+=drop.val;
