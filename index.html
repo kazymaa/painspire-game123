@@ -1082,9 +1082,9 @@ var TASKS_DEF = [
   {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
   {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
   {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
-  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
-  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
-  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+  {id:"task_cases_5",   type:"cases",  target:5,      reward:5000,   title:"5 кейсів відкрито",   desc:"Відкрий 5 будь-яких кейсів"},
+  {id:"task_cases_20",  type:"cases",  target:20,     reward:20000,  title:"20 кейсів відкрито",  desc:"Відкрий 20 будь-яких кейсів"},
+  {id:"task_cases_50",  type:"cases",  target:50,     reward:80000,  title:"50 кейсів відкрито",  desc:"Відкрий 50 будь-яких кейсів"},
 ];
 
 // Task progress stored in G
@@ -1097,8 +1097,7 @@ function getTaskProgress(task) {
     case 'pain':   return G.pain;
     case 'lvl':    return G.lvl;
     case 'streak': return G.streak;
-    case 'spins':  return casinoStats.spins;
-    case 'cwins':  return casinoStats.wins;
+    case 'cases':  return caseStats.opened || 0;
     default: return 0;
   }
 }
@@ -1201,8 +1200,8 @@ var CASES_DEF = [
       {val:30000,  label:'30 000',  chance:4,   rarity:'epic'},
       {val:40000,  label:'40 000',  chance:3,   rarity:'epic'},
       {val:50000,  label:'50 000',  chance:2,   rarity:'epic'},
-      {val:100000, label:'100 000', chance:1.9, rarity:'epic'},
-      {val:0, label:'🎁 Іграшка', chance:0.1, rarity:'prize', prize:true, prizeId:'toy'}
+      {val:100000, label:'100 000', chance:1.0, rarity:'epic'},
+      {val:0, label:'🎁 Іграшка', chance:1.0, rarity:'prize', prize:true, prizeId:'toy'}
     ]
   },
   {
@@ -1213,8 +1212,8 @@ var CASES_DEF = [
       {val:100000, label:'100 000', chance:20, rarity:'rare'},
       {val:150000, label:'150 000', chance:14, rarity:'rare'},
       {val:300000, label:'300 000', chance:12, rarity:'epic'},
-      {val:500000, label:'500 000', chance:10, rarity:'epic'},
-      {val:0, label:'👕 Acne Studio', chance:12, rarity:'prize', prize:true, prizeId:'shirt'}
+      {val:500000, label:'500 000', chance:21.85, rarity:'epic'},
+      {val:0, label:'👕 Acne Studio', chance:0.15, rarity:'prize', prize:true, prizeId:'shirt'}
     ]
   }
 ];
@@ -1469,9 +1468,9 @@ var TASKS_DEF = [
   {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
   {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
   {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
-  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
-  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
-  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+  {id:"task_cases_5",   type:"cases",  target:5,      reward:5000,   title:"5 кейсів відкрито",   desc:"Відкрий 5 будь-яких кейсів"},
+  {id:"task_cases_20",  type:"cases",  target:20,     reward:20000,  title:"20 кейсів відкрито",  desc:"Відкрий 20 будь-яких кейсів"},
+  {id:"task_cases_50",  type:"cases",  target:50,     reward:80000,  title:"50 кейсів відкрито",  desc:"Відкрий 50 будь-яких кейсів"},
 ];
 
 // Task progress stored in G
@@ -1484,8 +1483,7 @@ function getTaskProgress(task) {
     case 'pain':   return G.pain;
     case 'lvl':    return G.lvl;
     case 'streak': return G.streak;
-    case 'spins':  return casinoStats.spins;
-    case 'cwins':  return casinoStats.wins;
+    case 'cases':  return caseStats.opened || 0;
     default: return 0;
   }
 }
@@ -1883,9 +1881,9 @@ var TASKS_DEF = [
   {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
   {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
   {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
-  {id:"task_casino_10", type:"spins",  target:10,     reward:5000,   title:"10 спінів казино",    desc:"Зроби 10 прокруток барабану"},
-  {id:"task_casino_50", type:"spins",  target:50,     reward:20000,  title:"50 спінів казино",    desc:"Зроби 50 прокруток барабану"},
-  {id:"task_win_casino",type:"cwins",  target:5,      reward:15000,  title:"5 виграшів казино",   desc:"Виграй у казино 5 разів"},
+  {id:"task_cases_5",   type:"cases",  target:5,      reward:5000,   title:"5 кейсів відкрито",   desc:"Відкрий 5 будь-яких кейсів"},
+  {id:"task_cases_20",  type:"cases",  target:20,     reward:20000,  title:"20 кейсів відкрито",  desc:"Відкрий 20 будь-яких кейсів"},
+  {id:"task_cases_50",  type:"cases",  target:50,     reward:80000,  title:"50 кейсів відкрито",  desc:"Відкрий 50 будь-яких кейсів"},
 ];
 
 // Task progress stored in G
@@ -1898,8 +1896,7 @@ function getTaskProgress(task) {
     case 'pain':   return G.pain;
     case 'lvl':    return G.lvl;
     case 'streak': return G.streak;
-    case 'spins':  return casinoStats.spins;
-    case 'cwins':  return casinoStats.wins;
+    case 'cases':  return caseStats.opened || 0;
     default: return 0;
   }
 }
