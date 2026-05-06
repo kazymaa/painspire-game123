@@ -36,7 +36,7 @@ body{display:flex;justify-content:center;font-family:'Courier New',monospace}
 .xpbar{height:100%;background:linear-gradient(90deg,#880000,#ff2222);border-radius:3px;transition:.4s}
 
 /* PAGES - KEY FIX: use position absolute so nav always shows */
-#scroll-area{flex:1;position:relative;overflow:hidden;min-height:0}
+#scroll-area{flex:1;position:relative;overflow:hidden;min-height:0;display:block}
 .page{display:none;position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;animation:fadeIn .22s ease;padding-bottom:8px}
 .page::-webkit-scrollbar{display:none}
 .page.on{display:block}
@@ -234,8 +234,14 @@ input:checked+.toggle-slider:before{transform:translateX(24px);background:#ff333
         <span class="lvl-badge" id="lvl-badge">УР. 1 · Перша кров</span>
         <span class="next-lbl" id="next-lbl">1000 до наступного рівня</span>
       </div>
-      <div class="profile-btn" id="profile-btn" onclick="openSettings()">
-        <span id="profile-ico">⚙</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div id="online-badge" style="display:flex;align-items:center;gap:5px;background:#0a0000;border:1px solid #1a3300;border-radius:20px;padding:4px 10px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#44ff44;box-shadow:0 0 6px #44ff44;flex-shrink:0"></div>
+          <span id="online-count" style="font-size:11px;color:#44cc44;font-weight:700">...</span>
+        </div>
+        <div class="profile-btn" id="profile-btn" onclick="openSettings()">
+          <span id="profile-ico">⚙</span>
+        </div>
       </div>
     </div>
     <div class="xpbar-wrap"><div class="xpbar" id="xpbar" style="width:0%"></div></div>
@@ -463,6 +469,10 @@ async function dbLoad() {
   try {
     var res = await sb.from('players').select('*').eq('tg_id', G.tgId).single();
     if (res.data) {
+      if (res.data.banned) {
+        document.getElementById('app').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0000;flex-direction:column;gap:16px"><div style="font-size:48px">🔨</div><div style="font-size:18px;color:#cc0000;font-weight:700;letter-spacing:2px">АКАУНТ ЗАБЛОКОВАНО</div><div style="font-size:12px;color:#440000">Напишіть адміністратору</div></div>';
+        return;
+      }
       var d = res.data;
       if (d.pain != null)   G.pain = d.pain;
       if (d.lvl)            G.lvl = d.lvl;
@@ -915,10 +925,28 @@ function buildDaily(){
   document.getElementById('claim-btn').disabled=claimed;
 }
 function claimDaily(){
-  var today=new Date().toDateString();if(G.lastClaim===today)return;
-  var amt=DAILY_R[Math.min(G.streak,DAILY_R.length-1)];
-  G.pain+=amt;G.streak++;G.lastClaim=today;
-  buildDaily();updateHUD();toast('+'+fmt(amt)+' БОЛЮ! 🩸');vibrate([20,10,20,10,30]);dbSave();
+  var today=new Date().toDateString();
+  if(G.lastClaim===today)return;
+  // Check if missed a day - reset streak
+  if(G.lastClaim){
+    var last=new Date(G.lastClaim);
+    var now=new Date();
+    var diffDays=Math.floor((now-last)/(1000*60*60*24));
+    if(diffDays>1){
+      G.streak=0;
+      toast('Серія скинута! Ти пропустив день 😢');
+    }
+  }
+  var idx=Math.min(G.streak,DAILY_R.length-1);
+  var amt=DAILY_R[idx];
+  G.pain+=amt;
+  G.streak++;
+  // Reset after 7 days
+  if(G.streak>=DAILY_R.length) G.streak=0;
+  G.lastClaim=today;
+  buildDaily();updateHUD();
+  try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
+  toast('+'+fmt(amt)+' БОЛЮ! 🩸');vibrate([20,10,20,10,30]);dbSave();
 }
 
 // ══ SETTINGS ══
@@ -1179,14 +1207,14 @@ function buildDailyInTasks() {
 var CASES_DEF = [
   {
     id:'c1', name:'Нищета', icon:'💸', color:'#448800',
-    price:1899,
+    price:2000,
     drops:[
-      {val:1000, label:'1 000', chance:35, rarity:'common'},
-      {val:1500, label:'1 500', chance:25, rarity:'common'},
-      {val:2000, label:'2 000', chance:20, rarity:'common'},
-      {val:3000, label:'3 000', chance:10, rarity:'rare'},
-      {val:4000, label:'4 000', chance:7,  rarity:'rare'},
-      {val:5000, label:'5 000', chance:3,  rarity:'epic'}
+      {val:500,  label:'500',   chance:40, rarity:'common'},
+      {val:1000, label:'1 000', chance:30, rarity:'common'},
+      {val:1500, label:'1 500', chance:15, rarity:'common'},
+      {val:2000, label:'2 000', chance:8,  rarity:'rare'},
+      {val:3000, label:'3 000', chance:5,  rarity:'rare'},
+      {val:5000, label:'5 000', chance:2,  rarity:'epic'}
     ]
   },
   {
@@ -1216,6 +1244,22 @@ var CASES_DEF = [
       {val:0, label:'👕 Acne Studio', chance:0.15, rarity:'prize', prize:true, prizeId:'shirt'}
     ]
   }
+,
+  {
+    id:'cblack', name:'BLACK CASE', icon:'🖤', color:'#aa00ff',
+    price:25000,
+    isBlack:true,
+    drops:[
+      {val:7000,   label:'7 000',   chance:80,   rarity:'common'},
+      {val:10000,  label:'10 000',  chance:80,   rarity:'common'},
+      {val:15000,  label:'15 000',  chance:70,   rarity:'rare'},
+      {val:20000,  label:'20 000',  chance:60,   rarity:'rare'},
+      {val:30000,  label:'30 000',  chance:50,   rarity:'epic'},
+      {val:67000,  label:'67 000',  chance:2,    rarity:'epic'},
+      {val:100000, label:'100 000', chance:1,    rarity:'epic'},
+      {val:0, label:'💳 300 грн', chance:0.25, rarity:'prize', prize:true, prizeId:'money300'}
+    ]
+  }
 ];
 
 var caseStats = {opened:0, earned:0, spent:0, best:0};
@@ -1239,18 +1283,43 @@ function updateCaseStatsUI(){
   if(b)b.textContent=caseStats.best>0?fmt(caseStats.best):(caseStats.best===-1?'Іграшка':'Футболка')||'-';
 }
 
+function isBlackCaseVisible(){
+  // Kyiv time = UTC+3
+  var now=new Date();
+  var kyivHour=(now.getUTCHours()+3)%24;
+  return kyivHour>=0&&kyivHour<4;
+}
+
 function buildCaseCards(){
   var el=document.getElementById('case-cards');if(!el)return;
   el.innerHTML='';
+  var blackVisible=isBlackCaseVisible();
   CASES_DEF.forEach(function(cas){
-    var d=document.createElement('div');d.className='case-card';
+    if(cas.isBlack&&!blackVisible)return;
+    var d=document.createElement('div');
+    d.className='case-card';
+    if(cas.isBlack){
+      d.style.border='2px solid #aa00ff';
+      d.style.background='#0a0014';
+      d.style.boxShadow='0 0 20px #aa00ff33';
+    }
     var dropsHtml='';
-    // Show top drops
     var sorted=[].concat(cas.drops).sort(function(a,b){return b.val-a.val;});
     sorted.slice(0,5).forEach(function(dr){
       dropsHtml+='<span class="drop-pill '+dr.rarity+'">'+dr.label+'</span>';
     });
+    var blackTimer='';
+    if(cas.isBlack){
+      var now=new Date();
+      var kyivH=(now.getUTCHours()+3)%24;
+      var kyivM=now.getMinutes();
+      var minLeft=(4*60)-(kyivH*60+kyivM);
+      if(minLeft<0)minLeft+=1440;
+      var hLeft=Math.floor(minLeft/60),mLeft=minLeft%60;
+      blackTimer='<div style="font-size:11px;color:#aa00ff;margin-bottom:8px;font-weight:700">⏰ Зникне через: '+hLeft+'г '+mLeft+'хв</div>';
+    }
     d.innerHTML=
+      (cas.isBlack?'<div style="font-size:10px;color:#aa00ff;letter-spacing:2px;font-weight:700;margin-bottom:8px">🌙 НІЧНИЙ КЕЙС · 00:00 — 04:00</div>':'')+
       '<div class="case-card-header">'+
         '<span class="case-icon">'+cas.icon+'</span>'+
         '<div>'+
@@ -1258,8 +1327,9 @@ function buildCaseCards(){
           '<div class="case-price">'+fmt(cas.price)+' болю</div>'+
         '</div>'+
       '</div>'+
+      blackTimer+
       '<div class="case-drops">'+dropsHtml+'</div>'+
-      '<button class="open-case-btn" onclick="selectCase(&quot;'+cas.id+'&quot;)">📦 ВІДКРИТИ КЕЙС</button>';
+      '<button class="open-case-btn" style="'+(cas.isBlack?'border-color:#aa00ff;color:#cc66ff':'')+'" onclick="selectCase(&quot;'+cas.id+'&quot;)">📦 ВІДКРИТИ КЕЙС</button>';
     el.appendChild(d);
   });
   updateCaseStatsUI();
@@ -1286,9 +1356,10 @@ function closeCaseOpener(){
   updateCaseStatsUI();
 }
 
-// Roll weighted drop
+// Roll weighted drop (auto-normalizes chances)
 function rollDrop(cas){
-  var r=Math.random()*100;
+  var total=cas.drops.reduce(function(s,d){return s+d.chance;},0);
+  var r=Math.random()*total;
   var cum=0;
   for(var i=0;i<cas.drops.length;i++){
     cum+=cas.drops[i].chance;
@@ -2141,6 +2212,15 @@ function nav(page,el){
 }
 
 // ══ BUTTON ══
+// Long press profile btn = open admin (3 sec)
+var pbEl=document.getElementById('profile-btn');
+var pbTimer=null;
+pbEl.addEventListener('touchstart',function(e){
+  pbTimer=setTimeout(function(){if(isAdmin())openAdmin();},3000);
+});
+pbEl.addEventListener('touchend',function(){clearTimeout(pbTimer);});
+pbEl.addEventListener('touchmove',function(){clearTimeout(pbTimer);});
+
 var btnEl=document.getElementById('btn-bleed');
 btnEl.addEventListener('touchstart',function(e){e.preventDefault();bleed(e);},{passive:false});
 btnEl.addEventListener('click',function(e){if(!e.sourceCapabilities||!e.sourceCapabilities.firesTouchEvents)bleed(e);});
@@ -2164,6 +2244,7 @@ setInterval(function(){
   }
 },1000);
 setInterval(function(){dbSave();},10000);
+setInterval(updateOnline,60000);
 // Save when user leaves/hides the app
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState==='hidden') {
@@ -2180,6 +2261,112 @@ window.addEventListener('pagehide', function(){
   try { localStorage.setItem('ps_pain_backup', JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt})); } catch(e) {}
   dbSave();
 });
+
+// ══ ONLINE COUNTER ══
+async function updateOnline(){
+  try{
+    // Count players updated in last 3 minutes
+    var since=new Date(Date.now()-3*60*1000).toISOString();
+    var res=await sb.from('players').select('tg_id',{count:'exact',head:true}).gte('updated_at',since);
+    var n=(res.count||1);
+    // Add some random variance to feel real
+    n=Math.max(1,n+Math.floor(Math.random()*3));
+    var el=document.getElementById('online-count');
+    if(el)el.textContent=n+' онлайн';
+  }catch(e){
+    var el=document.getElementById('online-count');
+    if(el)el.textContent='1 онлайн';
+  }
+}
+
+// ══ ADMIN PANEL ══
+var ADMIN_TG_ID = 7424302191; // YOUR Telegram ID
+
+function isAdmin(){return G.tgId&&G.tgId==ADMIN_TG_ID;}
+
+function openAdmin(){
+  if(!isAdmin()){toast('Немає доступу');return;}
+  var overlay=document.createElement('div');
+  overlay.id='admin-overlay';
+  overlay.style.cssText='position:absolute;top:0;left:0;right:0;bottom:0;background:#050005f8;z-index:300;display:flex;flex-direction:column;overflow:hidden';
+  overlay.innerHTML=
+    '<div style="background:#0a0014;border-bottom:2px solid #8800cc;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'+
+      '<span style="font-size:16px;color:#cc44ff;font-weight:900;letter-spacing:2px">⚡ АДМІН ПАНЕЛЬ</span>'+
+      '<button onclick="document.getElementById(&quot;admin-overlay&quot;).remove()" style="width:34px;height:34px;border-radius:50%;background:#1a0033;border:2px solid #660099;color:#cc44ff;font-size:16px;cursor:pointer">✕</button>'+
+    '</div>'+
+    '<div style="flex:1;overflow-y:auto;padding:16px">'+
+      '<div id="admin-msg" style="min-height:20px;margin-bottom:10px"></div>'+
+      // Give pain
+      '<div style="background:#0a0014;border:1px solid #440066;border-radius:10px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;color:#770099;font-weight:700;margin-bottom:8px;letter-spacing:1px">💰 ВИДАТИ БІЛЬ</div>'+
+        '<input id="adm-tgid" placeholder="TG ID гравця (або своє)" style="width:100%;padding:10px;background:#050010;border:1px solid #440066;border-radius:6px;color:#ddd;font-family:monospace;font-size:13px;outline:none;display:block;margin-bottom:8px">'+
+        '<input id="adm-pain" type="number" placeholder="Кількість болю" style="width:100%;padding:10px;background:#050010;border:1px solid #440066;border-radius:6px;color:#ddd;font-family:monospace;font-size:13px;outline:none;display:block;margin-bottom:8px">'+
+        '<button onclick="adminGivePain()" style="width:100%;padding:10px;background:#1a0033;border:1px solid #8800cc;border-radius:8px;color:#cc44ff;font-family:monospace;font-size:13px;font-weight:700;cursor:pointer">ВИДАТИ</button>'+
+      '</div>'+
+      // Ban
+      '<div style="background:#0a0014;border:1px solid #440066;border-radius:10px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;color:#770099;font-weight:700;margin-bottom:8px;letter-spacing:1px">🔨 БАН ГРАВЦЯ</div>'+
+        '<input id="adm-ban-id" placeholder="TG ID гравця" style="width:100%;padding:10px;background:#050010;border:1px solid #440066;border-radius:6px;color:#ddd;font-family:monospace;font-size:13px;outline:none;display:block;margin-bottom:8px">'+
+        '<button onclick="adminBan()" style="width:100%;padding:10px;background:#1a0000;border:1px solid #cc0000;border-radius:8px;color:#ff4444;font-family:monospace;font-size:13px;font-weight:700;cursor:pointer">ЗАБАНИТИ</button>'+
+      '</div>'+
+      // View all players
+      '<div style="background:#0a0014;border:1px solid #440066;border-radius:10px;padding:14px;margin-bottom:10px">'+
+        '<div style="font-size:12px;color:#770099;font-weight:700;margin-bottom:8px;letter-spacing:1px">👥 ГРАВЦІ</div>'+
+        '<button onclick="adminLoadPlayers()" style="width:100%;padding:10px;background:#1a0033;border:1px solid #8800cc;border-radius:8px;color:#cc44ff;font-family:monospace;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px">ЗАВАНТАЖИТИ СПИСОК</button>'+
+        '<div id="adm-players" style="max-height:300px;overflow-y:auto"></div>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('app').appendChild(overlay);
+}
+
+async function adminGivePain(){
+  var tgid=parseInt(document.getElementById('adm-tgid').value)||G.tgId;
+  var amount=parseInt(document.getElementById('adm-pain').value)||0;
+  var msg=document.getElementById('admin-msg');
+  if(!amount){msg.innerHTML='<div style="color:#cc4444;font-size:12px">Введи суму</div>';return;}
+  try{
+    // Get current pain
+    var res=await sb.from('players').select('pain,lvl').eq('tg_id',tgid).single();
+    if(res.error){msg.innerHTML='<div style="color:#cc4444;font-size:12px">Гравця не знайдено</div>';return;}
+    var newPain=(res.data.pain||0)+amount;
+    // Recalc level
+    var nl=1,na=1000;while(newPain>=na){nl++;na+=nl*1000;}
+    await sb.from('players').update({pain:newPain,lvl:nl,next_lvl_at:na,updated_at:new Date().toISOString()}).eq('tg_id',tgid);
+    // If own account update local state
+    if(tgid==G.tgId){G.pain=newPain;G.lvl=nl;G.nextLvlAt=na;updateHUD();}
+    msg.innerHTML='<div style="color:#44ff66;font-size:12px">✓ Видано '+fmt(amount)+' болю гравцю '+tgid+'</div>';
+  }catch(e){msg.innerHTML='<div style="color:#cc4444;font-size:12px">Помилка: '+e.message+'</div>';}
+}
+
+async function adminBan(){
+  var tgid=parseInt(document.getElementById('adm-ban-id').value);
+  var msg=document.getElementById('admin-msg');
+  if(!tgid){msg.innerHTML='<div style="color:#cc4444;font-size:12px">Введи TG ID</div>';return;}
+  try{
+    await sb.from('players').update({banned:true,updated_at:new Date().toISOString()}).eq('tg_id',tgid);
+    msg.innerHTML='<div style="color:#44ff66;font-size:12px">✓ Гравця '+tgid+' забанено</div>';
+  }catch(e){msg.innerHTML='<div style="color:#cc4444;font-size:12px">Помилка</div>';}
+}
+
+async function adminLoadPlayers(){
+  var cont=document.getElementById('adm-players');
+  cont.innerHTML='<div style="color:#550077;font-size:12px">Завантаження...</div>';
+  try{
+    var res=await sb.from('players').select('tg_id,username,pain,lvl,banned').order('pain',{ascending:false}).limit(50);
+    cont.innerHTML='';
+    (res.data||[]).forEach(function(p){
+      var d=document.createElement('div');
+      d.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a0033;font-size:11px;gap:8px';
+      d.innerHTML=
+        '<span style="color:#aa44ff;font-weight:700">'+p.tg_id+'</span>'+
+        '<span style="color:#cc88ff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 6px">'+p.username+'</span>'+
+        '<span style="color:#ff4444;font-weight:700">'+fmt(p.pain)+'</span>'+
+        '<span style="color:#550077">рів.'+p.lvl+'</span>'+
+        (p.banned?'<span style="color:#ff0000">БАН</span>':'');
+      cont.appendChild(d);
+    });
+  }catch(e){cont.innerHTML='<div style="color:#cc4444;font-size:12px">Помилка</div>';}
+}
 
 // ══ INIT ══
 async function init(){
@@ -2210,6 +2397,12 @@ async function init(){
   loadSettings();
   loadCaseStats();
   recalc();startRegen();updateHUD();
+  updateOnline();
+  // Show admin button in profile if admin
+  if(isAdmin()){
+    var pb=document.getElementById('profile-btn');
+    if(pb)pb.style.border='2px solid #aa00ff';
+  }
   document.getElementById('loading').style.display='none';
 }
 init();
