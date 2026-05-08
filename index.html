@@ -906,7 +906,16 @@ function buildRewards(){
 function claimR(id){
   var r=REWARDS.find(function(x){return x.id===id;});if(!r||G.claimedR.indexOf(id)>=0)return;
   if(G.pain<r.cost){toast('Мало болю!');return;}
-  G.pain-=r.cost;G.claimedR.push(id);buildRewards();updateHUD();toast(r.title+' — ОТРИМАНО! 🎉');vibrate([20,10,40]);
+  G.pain-=r.cost;G.claimedR.push(id);buildRewards();updateHUD();
+  toast(r.title+' — ОТРИМАНО! 🎉');vibrate([20,10,40]);
+  var prizeMap={r2:{id:'toy',label:'Іграшка Painspire'},r3:{id:'shirt',label:'Acne Studio'},r4:{id:'long',label:'Long Hyperborea'},r5:{id:'shop',label:'Річ з магазину'}};
+  if(prizeMap[id]){
+    var pm=prizeMap[id];
+    var card={id:pm.id,label:pm.label,caseId:'reward',caseName:'Нагорода',date:new Date().toLocaleDateString('uk'),tgId:G.tgId,username:G.username};
+    try{var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');cards.push(card);localStorage.setItem('ps_prize_cards',JSON.stringify(cards));}catch(e){}
+    showPrizeCard(card);
+  }
+  dbSave();
 }
 function donTON(){try{navigator.clipboard.writeText('UQALjRzVIoom9Bnnm575XmR1G5VAa5lcPv7aADG07AdQLtt2');}catch(e){}toast('Гаманець скопійовано! 💙');}
 
@@ -1228,8 +1237,8 @@ var CASES_DEF = [
       {val:30000,  label:'30 000',  chance:4,   rarity:'epic'},
       {val:40000,  label:'40 000',  chance:3,   rarity:'epic'},
       {val:50000,  label:'50 000',  chance:2,   rarity:'epic'},
-      {val:100000, label:'100 000', chance:1.0, rarity:'epic'},
-      {val:0, label:'🎁 Іграшка', chance:1.0, rarity:'prize', prize:true, prizeId:'toy'}
+      {val:100000, label:'100 000', chance:1.7, rarity:'epic'},
+      {val:0, label:'🎁 Іграшка', chance:0.3, rarity:'prize', prize:true, prizeId:'toy'}
     ]
   },
   {
@@ -2219,6 +2228,7 @@ pbEl.addEventListener('touchstart',function(e){
   pbTimer=setTimeout(function(){if(isAdmin())openAdmin();},3000);
 });
 pbEl.addEventListener('touchend',function(){clearTimeout(pbTimer);});
+pbEl.addEventListener('dblclick',function(){if(isAdmin())openAdmin();});
 pbEl.addEventListener('touchmove',function(){clearTimeout(pbTimer);});
 
 var btnEl=document.getElementById('btn-bleed');
@@ -2267,7 +2277,7 @@ async function updateOnline(){
   try{
     // Count players updated in last 3 minutes
     var since=new Date(Date.now()-3*60*1000).toISOString();
-    var res=await sb.from('players').select('tg_id',{count:'exact',head:true}).gte('updated_at',since);
+    var res=await sb.from('players').select('tg_id, updated_at',{count:'exact',head:true}).gte('updated_at',since);
     var n=(res.count||1);
     // Add some random variance to feel real
     n=Math.max(1,n+Math.floor(Math.random()*3));
@@ -2280,9 +2290,9 @@ async function updateOnline(){
 }
 
 // ══ ADMIN PANEL ══
-var ADMIN_TG_ID = 1022303290; // YOUR Telegram ID
+var ADMIN_TG_ID = -1003841855741;
 
-function isAdmin(){return G.tgId&&G.tgId==ADMIN_TG_ID;}
+function isAdmin(){return G.tgId&&String(G.tgId)===String(ADMIN_TG_ID);}
 
 function openAdmin(){
   if(!isAdmin()){toast('Немає доступу');return;}
