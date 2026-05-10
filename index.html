@@ -1271,10 +1271,27 @@ function buildDailyInTasks() {
 
 // ══ CASE SOUNDS (CS2-style via Web Audio API) ══
 var audioCtx=null;
+var audioUnlocked=false;
 function getAudioCtx(){
   if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
   return audioCtx;
 }
+// Unlock audio on first user tap (mobile/Telegram policy)
+function unlockAudio(){
+  if(audioUnlocked)return;
+  var ctx=getAudioCtx();
+  if(!ctx)return;
+  if(ctx.state==='suspended')ctx.resume();
+  var b=ctx.createBuffer(1,1,22050);
+  var s=ctx.createBufferSource();
+  s.buffer=b;s.connect(ctx.destination);
+  s.start(0);
+  audioUnlocked=true;
+}
+document.addEventListener('touchstart',unlockAudio,{once:true});
+document.addEventListener('touchend',unlockAudio,{once:true});
+document.addEventListener('click',unlockAudio,{once:true});
 function playTone(freq,dur,vol,type){
   var ctx=getAudioCtx();if(!ctx)return;
   var osc=ctx.createOscillator();
