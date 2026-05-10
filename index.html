@@ -458,6 +458,8 @@ var G = {
   vibrationOn: true,
   effectsOn: true,
   shakeOn: true,
+  firstCaseTime: 0,   // timestamp of first case open
+  caseOpenCount: 0,   // total cases opened this session
   autoClickStarted: 0,
   autoClickActive: false,
   taskProgress: {taps:0, claimed:[]}
@@ -986,6 +988,7 @@ function renderSP(){
         '<button class="nick-btn" onclick="changeNick()">ЗБЕРЕГТИ</button>'+
       '</div>'+
       '<div id="nick-msg" style="margin-top:8px;min-height:20px"></div>'+
+      (isAdmin()?'<button onclick="openAdmin()" style="width:100%;padding:13px;background:#0a0014;border:2px solid #aa00ff;border-radius:8px;color:#cc44ff;font-family:monospace;font-size:14px;font-weight:900;cursor:pointer;margin-top:10px;letter-spacing:1px">&#9889; ADMIN PANEL</button>':'')+
     '</div>'+
     '<div class="toggle-row">'+
       '<div>'+
@@ -1039,13 +1042,16 @@ function renderSP(){
     (G.tgId?
       '<div style="background:#0a0000;border:1px solid #1a0000;border-radius:8px;padding:12px;font-size:12px;color:#440000;text-align:center">'+
         '✅ Акаунт прив\'язано до Telegram<br>'+
-        '<span style="font-size:11px;color:#330000">Прогрес зберігається кожні 20 сек</span>'+
+        '<span style="font-size:11px;color:#330000">Прогрес зберігається кожні 10 сек</span>'+
       '</div>':
       '<div style="background:#0f0000;border:1px solid #330000;border-radius:8px;padding:12px;font-size:12px;color:#880000;text-align:center">'+
         '⚠ Відкрий через Telegram бота<br>'+
         '<span style="font-size:11px">для автозбереження прогресу</span>'+
       '</div>'
-    );
+    )+
+    (isAdmin()?
+      '<button onclick="openAdmin()" style="width:100%;padding:13px;background:#0a0014;border:2px solid #aa00ff;border-radius:8px;color:#cc44ff;font-family:monospace;font-size:14px;font-weight:900;cursor:pointer;margin-top:10px;letter-spacing:1px;box-shadow:0 0 15px #aa00ff44">⚡ АДМІН ПАНЕЛЬ</button>'
+      :'');
 }
 
 function saveSettings(){
@@ -1272,6 +1278,8 @@ var CASES_DEF = [
 ];
 
 var caseStats = {opened:0, earned:0, spent:0, best:0};
+var LUCKY_MODE = false; // true = first open after 24h, guaranteed good drop
+var STREAK_MODE = 0;   // counts bad streak after lucky win
 var currentCase = null;
 var caseSpinning = false;
 
@@ -1365,16 +1373,43 @@ function closeCaseOpener(){
   updateCaseStatsUI();
 }
 
-// Roll weighted drop (auto-normalizes chances)
+// Roll weighted drop with casino psychology
+function getLuckMultiplier(){
+  var now=Date.now(),ft=G.firstCaseTime||0,cnt=G.caseOpenCount||0;
+  if(ft===0||cnt===0)return 4.0;
+  var hrs=(now-ft)/3600000;
+  if(hrs<24&&cnt<=10)return Math.max(1.5,3.0-(1.5*cnt/10));
+  if(cnt<=30)return 0.4;
+  if(cnt<=60)return 0.25;
+  if(cnt<=100)return 0.25+(0.3*(cnt-60)/40);
+  if(cnt<=115)return 1.5;
+  return 0.4;
+}
+
 function rollDrop(cas){
-  var total=cas.drops.reduce(function(s,d){return s+d.chance;},0);
-  var r=Math.random()*total;
-  var cum=0;
-  for(var i=0;i<cas.drops.length;i++){
-    cum+=cas.drops[i].chance;
-    if(r<cum)return cas.drops[i];
-  }
+  var luck=getLuckMultiplier();
+  var weights=cas.drops.map(function(d){
+    if(d.rarity==='common')return d.chance;
+    if(d.rarity==='rare')return d.chance*Math.max(0.1,luck);
+    if(d.rarity==='epic')return d.chance*Math.max(0.05,luck);
+    if(d.rarity==='prize')return d.chance*Math.max(0.02,luck*0.5);
+    return d.chance;
+  });
+  var total=weights.reduce(function(s,w){return s+w;},0);
+  var r=Math.random()*total,cum=0;
+  for(var i=0;i<weights.length;i++){cum+=weights[i];if(r<cum)return cas.drops[i];}
   return cas.drops[cas.drops.length-1];
+}
+
+function checkLuckyMode(){
+  try{
+    var last=parseInt(localStorage.getItem('ps_last_case_open')||'0');
+    var diff=Date.now()-last;
+    if(diff>=24*3600*1000&&last>0){
+      LUCKY_MODE=true;
+    }
+    localStorage.setItem('ps_last_case_open',String(Date.now()));
+  }catch(e){}
 }
 
 // Build strip of items
@@ -1411,6 +1446,7 @@ function buildStrip(cas, finalDrop){
 function openCase(){
   if(!currentCase||caseSpinning)return;
   if(G.pain<currentCase.price){toast('Мало болю! Потрібно '+fmt(currentCase.price));return;}
+  checkLuckyMode();
   caseSpinning=true;
   var btn=document.getElementById('case-spin-btn');
   btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
@@ -1418,8 +1454,12 @@ function openCase(){
 
   G.pain-=currentCase.price;
   caseStats.spent+=currentCase.price;
+  // Track for honeymoon system
+  if(!G.firstCaseTime) G.firstCaseTime = Date.now();
+  G.caseOpenCount = (G.caseOpenCount||0) + 1;
   updateHUD();
   try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
+  try{localStorage.setItem('ps_case_luck',JSON.stringify({firstCaseTime:G.firstCaseTime,caseOpenCount:G.caseOpenCount}));}catch(e){}
 
   var result=rollDrop(currentCase);
   buildStrip(currentCase,result);
@@ -2407,6 +2447,12 @@ async function init(){
   }
   loadSettings();
   loadCaseStats();
+  // Load honeymoon data
+  try{
+    var lk=JSON.parse(localStorage.getItem('ps_case_luck')||'{}');
+    if(lk.firstCaseTime) G.firstCaseTime=lk.firstCaseTime;
+    if(lk.caseOpenCount) G.caseOpenCount=lk.caseOpenCount;
+  }catch(e){}
   recalc();startRegen();updateHUD();
   updateOnline();
   // Show admin button in profile if admin
