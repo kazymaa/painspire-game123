@@ -25,6 +25,10 @@ body{display:flex;justify-content:center;font-family:'Courier New',monospace}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 @keyframes bloodDrip{0%{transform:scaleY(0);opacity:1;transform-origin:top}100%{transform:scaleY(1);opacity:0.7;transform-origin:top}}
+@keyframes cardShine{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes prizeGlow{0%,100%{box-shadow:0 0 10px #ffaa0044}50%{box-shadow:0 0 25px #ffaa0088,0 0 40px #ffaa0033}}
+.prize-card-mini{background:#0f0800;border:1px solid #664400;border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px;margin-bottom:8px;animation:prizeGlow 3s ease-in-out infinite;position:relative;overflow:hidden}
+.prize-card-mini::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent 40%,rgba(255,170,0,0.06) 50%,transparent 60%);background-size:200% 100%;animation:cardShine 4s linear infinite;pointer-events:none}
 
 #topbar{background:#0d0000;padding:10px 16px 8px;border-bottom:1px solid #330000;flex-shrink:0}
 .tb-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -920,20 +924,31 @@ function claimR(id){
 function donTON(){try{navigator.clipboard.writeText('UQALjRzVIoom9Bnnm575XmR1G5VAa5lcPv7aADG07AdQLtt2');}catch(e){}toast('Гаманець скопійовано! 💙');}
 
 // ══ PRIZE CARDS ══
+function getPrizeIcon(label){
+  if(label.indexOf('💳')>=0||label.indexOf('грн')>=0)return '💳';
+  if(label.indexOf('👕')>=0||label.indexOf('утболк')>=0||label.indexOf('Acne')>=0||label.indexOf('Long')>=0)return '👕';
+  if(label.indexOf('🧸')>=0||label.indexOf('грашк')>=0)return '🧸';
+  if(label.indexOf('🛍')>=0||label.indexOf('агазин')>=0)return '🛍';
+  return '🏆';
+}
 function showPrizeCard(card){
+  var ico=getPrizeIcon(card.label);
   var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease';
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease';
   overlay.innerHTML=
-    '<div style="background:#0f0000;border:2px solid #ffaa00;border-radius:16px;padding:24px;max-width:300px;width:90%;text-align:center;box-shadow:0 0 40px #ffaa0055">'+
-      '<div style="font-size:40px;margin-bottom:12px">'+
-        (card.label.match(/[^\w\s]/)?card.label.split(' ')[0]:'🎁')+'</div>'+
-      '<div style="font-size:18px;color:#ffaa00;font-weight:900;margin-bottom:8px">'+card.label+'</div>'+
-      '<div style="font-size:12px;color:#cc8844;margin-bottom:4px">Кейс: '+card.caseName+'</div>'+
-      '<div style="font-size:11px;color:#886633;margin-bottom:16px">'+card.date+'</div>'+
-      '<button onclick="this.parentNode.parentNode.remove()" style="padding:12px 24px;background:#1a0000;border:2px solid #cc8800;border-radius:8px;color:#ffaa00;font-family:monospace;font-size:14px;font-weight:700;cursor:pointer">КРУТО!</button>'+
+    '<div style="background:linear-gradient(135deg,#1a0800,#0f0000);border:2px solid #ffaa00;border-radius:16px;padding:28px;max-width:300px;width:90%;text-align:center;box-shadow:0 0 60px #ffaa0066,0 0 120px #ffaa0022;position:relative;overflow:hidden">'+
+      '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent 40%,rgba(255,170,0,0.08) 50%,transparent 60%);background-size:200% 100%;animation:cardShine 3s linear infinite;pointer-events:none"></div>'+
+      '<div style="font-size:11px;color:#cc8844;letter-spacing:3px;font-weight:700;margin-bottom:10px">НОВА КАРТОЧКА!</div>'+
+      '<div style="font-size:56px;margin-bottom:12px;filter:drop-shadow(0 0 20px #ffaa0088)">'+ico+'</div>'+
+      '<div style="font-size:20px;color:#ffdd44;font-weight:900;margin-bottom:6px;text-shadow:0 0 20px #ffaa0066">'+card.label+'</div>'+
+      '<div style="font-size:12px;color:#cc8844;margin-bottom:4px">'+card.caseName+'</div>'+
+      '<div style="font-size:11px;color:#886633;margin-bottom:18px">'+card.date+'</div>'+
+      '<div style="font-size:10px;color:#664422;margin-bottom:14px">Збережено у профілі</div>'+
+      '<button onclick="this.closest(&quot;div[style*=position\\:fixed]&quot;).remove()" style="padding:12px 32px;background:linear-gradient(135deg,#2a1000,#1a0000);border:2px solid #cc8800;border-radius:8px;color:#ffdd44;font-family:monospace;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 0 15px #cc880044">КРУТО!</button>'+
     '</div>';
   overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
   document.getElementById('app').appendChild(overlay);
+  playCaseSound('prize');
 }
 
 function showPrizeCards(){
@@ -942,11 +957,13 @@ function showPrizeCards(){
     if(!cards.length)return;
     var container=document.getElementById('sp-body');
     if(!container)return;
-    var html='<div style="margin-bottom:12px"><div style="font-size:12px;color:#ffaa00;letter-spacing:2px;font-weight:700;margin-bottom:8px">🏆 ТВОЇ ПРИЗИ</div>';
+    var html='<div style="margin:12px 0">'+
+      '<div style="font-size:12px;color:#ffaa00;letter-spacing:2px;font-weight:700;margin-bottom:10px">🏆 КОЛЕКЦІЯ КАРТОК ('+cards.length+')</div>';
     cards.forEach(function(c){
-      html+='<div style="background:#0f0800;border:1px solid #664400;border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'+
-        '<span style="font-size:24px">'+(c.label.match(/[^\w\s]/)?c.label.split(' ')[0]:'🎁')+'</span>'+
-        '<div><div style="font-size:13px;color:#ffaa00;font-weight:700">'+c.label+'</div>'+
+      var ico=getPrizeIcon(c.label);
+      html+='<div class="prize-card-mini">'+
+        '<span style="font-size:28px;z-index:1">'+ico+'</span>'+
+        '<div style="z-index:1"><div style="font-size:13px;color:#ffdd44;font-weight:700">'+c.label+'</div>'+
         '<div style="font-size:10px;color:#886633">'+c.caseName+' · '+c.date+'</div></div></div>';
     });
     html+='</div>';
@@ -988,7 +1005,7 @@ function claimDaily(){
   // Reset after 7 days
   if(G.streak>=DAILY_R.length) G.streak=0;
   G.lastClaim=today;
-  buildDaily();updateHUD();
+  buildDaily();buildDailyInTasks();updateHUD();
   try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
   toast('+'+fmt(amt)+' БОЛЮ! 🩸');vibrate([20,10,20,10,30]);dbSave();
 }
@@ -1014,6 +1031,7 @@ function renderSP(){
         '<div class="as"><div class="as-l">СЕРІЯ</div><div class="as-v">'+G.streak+' дн.</div></div>'+
         '<div class="as"><div class="as-l">ЗА ТАП</div><div class="as-v">+'+G.cpc+'</div></div>'+
         '<div class="as"><div class="as-l">РІВЕНЬ</div><div class="as-v">'+G.lvl+'</div></div>'+
+        '<div class="as"><div class="as-l">КАРТОК</div><div class="as-v">'+(function(){try{return JSON.parse(localStorage.getItem('ps_prize_cards')||'[]').length;}catch(e){return 0;}}())+'</div></div>'+
       '</div>'+
       '<div style="margin-top:14px;font-size:12px;color:#770000;margin-bottom:6px;font-weight:700;letter-spacing:1px">ЗМІНИТИ НІКНЕЙМ</div>'+
       '<div class="nick-row">'+
@@ -1249,6 +1267,48 @@ function buildDailyInTasks() {
   var idx = Math.min(G.streak, DAILY_R.length-1);
   if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
   if (btn) btn.disabled = claimed;
+}
+
+// ══ CASE SOUNDS (CS2-style via Web Audio API) ══
+var audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  return audioCtx;
+}
+function playTone(freq,dur,vol,type){
+  var ctx=getAudioCtx();if(!ctx)return;
+  var osc=ctx.createOscillator();
+  var gain=ctx.createGain();
+  osc.type=type||'sine';
+  osc.frequency.setValueAtTime(freq,ctx.currentTime);
+  gain.gain.setValueAtTime(vol||0.15,ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+(dur||0.1));
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start();osc.stop(ctx.currentTime+(dur||0.1));
+}
+function playCaseSound(type){
+  if(type==='tick'){
+    playTone(800,0.03,0.08,'square');
+  } else if(type==='slowtick'){
+    playTone(600,0.05,0.1,'sine');
+  } else if(type==='win'){
+    playTone(523,0.12,0.15,'sine');
+    setTimeout(function(){playTone(659,0.12,0.15,'sine');},120);
+    setTimeout(function(){playTone(784,0.2,0.15,'sine');},240);
+  } else if(type==='bigwin'){
+    playTone(523,0.15,0.2,'sine');
+    setTimeout(function(){playTone(659,0.15,0.2,'sine');},150);
+    setTimeout(function(){playTone(784,0.15,0.2,'sine');},300);
+    setTimeout(function(){playTone(1047,0.3,0.2,'sine');},450);
+  } else if(type==='prize'){
+    [523,659,784,1047,1319].forEach(function(f,i){
+      setTimeout(function(){playTone(f,0.2,0.2,'sine');},i*130);
+    });
+  } else if(type==='common'){
+    playTone(440,0.1,0.1,'sine');
+  } else if(type==='spin'){
+    playTone(220,0.08,0.1,'sawtooth');
+  }
 }
 
 // ══ CASES ══
@@ -1548,26 +1608,33 @@ function openCase(){
   var randOffset=(Math.random()*20-10);
   var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // Phase 1: fast launch
+  // Sound: spin start
+  playCaseSound('spin');
+
+  // Phase 1: fast launch + fast ticks
   strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
   strip.style.transform='translateX('+(-(22*ITEM_W-centerOffset))+'px)';
+  for(var ti=0;ti<12;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*70);})(ti);}
 
-  // Phase 2: full speed
+  // Phase 2: full speed + medium ticks
   setTimeout(function(){
     strip.style.transition='transform 0.7s linear';
     strip.style.transform='translateX('+(-(36*ITEM_W-centerOffset))+'px)';
+    for(var ti=0;ti<7;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*90);})(ti);}
   },950);
 
-  // Phase 3: decelerate
+  // Phase 3: decelerate + slow ticks
   setTimeout(function(){
     strip.style.transition='transform 0.8s cubic-bezier(0.5,0.0,0.9,0.4)';
     strip.style.transform='translateX('+(-(41*ITEM_W-centerOffset))+'px)';
+    for(var ti=0;ti<5;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*150);})(ti);}
   },1700);
 
-  // Phase 4: CS:GO slow crawl
+  // Phase 4: CS:GO slow crawl + rare ticks
   setTimeout(function(){
     strip.style.transition='transform 2.6s cubic-bezier(0.0,0.0,0.05,1.0)';
     strip.style.transform='translateX('+targetX+'px)';
+    for(var ti=0;ti<6;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*400);})(ti);}
   },2550);
 
   // Show result
@@ -1583,28 +1650,31 @@ function openCase(){
   },5250);
 }
 
+function savePrizeCard(label, caseName){
+  var card={
+    id: 'prize_'+Date.now(),
+    label: label,
+    caseId: currentCase?currentCase.id:'unknown',
+    caseName: caseName||'Кейс',
+    date: new Date().toLocaleDateString('uk'),
+    tgId: G.tgId,
+    username: G.username
+  };
+  try{
+    var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
+    cards.push(card);
+    localStorage.setItem('ps_prize_cards',JSON.stringify(cards));
+  }catch(e){}
+  return card;
+}
+
 function showCaseResult(drop){
   var resEl=document.getElementById('case-result');
   caseStats.opened++;
 
   if(drop.prize){
     caseStats.best=-1;
-    // Save prize card
-    var prizeCard={
-      id: drop.prizeId||'prize',
-      label: drop.label,
-      caseId: currentCase.id,
-      caseName: currentCase.name,
-      date: new Date().toLocaleDateString('uk'),
-      tgId: G.tgId,
-      username: G.username
-    };
-    try{
-      var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
-      cards.push(prizeCard);
-      localStorage.setItem('ps_prize_cards',JSON.stringify(cards));
-    }catch(e){}
-    // Show prize card overlay
+    var prizeCard=savePrizeCard(drop.label, currentCase.name);
     showPrizeCard(prizeCard);
     resEl.innerHTML='<span style="color:#ffaa00;font-size:18px">🎁 ЛЕГЕНДАРНИЙ ПРИЗ!</span>';
     vibrate([50,20,50,20,100,20,100]);
@@ -1622,9 +1692,16 @@ function showCaseResult(drop){
     caseStats.earned+=drop.val;
     if(drop.val>caseStats.best)caseStats.best=drop.val;
 
+    // Award prize card for huge wins (500K+)
+    if(drop.val>=500000){
+      var bigCard=savePrizeCard('🔥 '+fmt(drop.val)+' болю', currentCase.name);
+      showPrizeCard(bigCard);
+    }
+
     if(drop.val>=300000){
       resEl.innerHTML='<span style="color:#00ff88;font-size:18px">🔥 +'+fmt(drop.val)+' болю!</span>';
       vibrate([40,15,40,15,80]);
+      playCaseSound('bigwin');
       if(G.effectsOn){
         for(var i=0;i<4;i++){(function(d){setTimeout(function(){
           var fl=document.createElement('div');fl.className='flash-el';
@@ -1636,9 +1713,11 @@ function showCaseResult(drop){
     } else if(drop.val>=50000){
       resEl.innerHTML='<span style="color:#ff4444;font-size:16px">💥 +'+fmt(drop.val)+' болю!</span>';
       vibrate([25,10,40]);
+      playCaseSound('win');
     } else {
       resEl.innerHTML='<span style="color:#cc4444">+'+fmt(drop.val)+' болю</span>';
       vibrate(15);
+      playCaseSound('common');
     }
     updateHUD();
   }
@@ -1871,18 +1950,17 @@ window.addEventListener('pagehide', function(){
 
 // ══ ONLINE COUNTER ══
 async function updateOnline(){
+  var el=document.getElementById('online-count');
+  if(!el)return;
   try{
-    // Count players updated in last 3 minutes
-    var since=new Date(Date.now()-3*60*1000).toISOString();
-    var res=await sb.from('players').select('tg_id, updated_at',{count:'exact',head:true}).gte('updated_at',since);
-    var n=(res.count||1);
-    // Add some random variance to feel real
-    n=Math.max(1,n+Math.floor(Math.random()*3));
-    var el=document.getElementById('online-count');
-    if(el)el.textContent=n+' онлайн';
+    var since=new Date(Date.now()-5*60*1000).toISOString();
+    var res=await sb.from('players').select('tg_id',{count:'exact',head:true}).gte('updated_at',since);
+    var n=res.count;
+    if(n==null||n<1)n=1;
+    n=Math.max(1,n+Math.floor(Math.random()*2));
+    el.textContent=n+' онлайн';
   }catch(e){
-    var el=document.getElementById('online-count');
-    if(el)el.textContent='1 онлайн';
+    el.textContent='1 онлайн';
   }
 }
 
