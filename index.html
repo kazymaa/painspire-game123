@@ -25,6 +25,10 @@ body{display:flex;justify-content:center;font-family:'Courier New',monospace}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
 @keyframes bloodDrip{0%{transform:scaleY(0);opacity:1;transform-origin:top}100%{transform:scaleY(1);opacity:0.7;transform-origin:top}}
+@keyframes cardShine{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes prizeGlow{0%,100%{box-shadow:0 0 10px #ffaa0044}50%{box-shadow:0 0 25px #ffaa0088,0 0 40px #ffaa0033}}
+.prize-card-mini{background:#0f0800;border:1px solid #664400;border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px;margin-bottom:8px;animation:prizeGlow 3s ease-in-out infinite;position:relative;overflow:hidden}
+.prize-card-mini::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent 40%,rgba(255,170,0,0.06) 50%,transparent 60%);background-size:200% 100%;animation:cardShine 4s linear infinite;pointer-events:none}
 
 #topbar{background:#0d0000;padding:10px 16px 8px;border-bottom:1px solid #330000;flex-shrink:0}
 .tb-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -458,8 +462,6 @@ var G = {
   vibrationOn: true,
   effectsOn: true,
   shakeOn: true,
-  firstCaseTime: 0,   // timestamp of first case open
-  caseOpenCount: 0,   // total cases opened this session
   autoClickStarted: 0,
   autoClickActive: false,
   taskProgress: {taps:0, claimed:[]}
@@ -921,6 +923,54 @@ function claimR(id){
 }
 function donTON(){try{navigator.clipboard.writeText('UQALjRzVIoom9Bnnm575XmR1G5VAa5lcPv7aADG07AdQLtt2');}catch(e){}toast('Гаманець скопійовано! 💙');}
 
+// ══ PRIZE CARDS ══
+function getPrizeIcon(label){
+  if(label.indexOf('💳')>=0||label.indexOf('грн')>=0)return '💳';
+  if(label.indexOf('👕')>=0||label.indexOf('утболк')>=0||label.indexOf('Acne')>=0||label.indexOf('Long')>=0)return '👕';
+  if(label.indexOf('🧸')>=0||label.indexOf('грашк')>=0)return '🧸';
+  if(label.indexOf('🛍')>=0||label.indexOf('агазин')>=0)return '🛍';
+  return '🏆';
+}
+function showPrizeCard(card){
+  var ico=getPrizeIcon(card.label);
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:200;display:flex;align-items:center;justify-content:center;animation:fadeIn .3s ease';
+  overlay.innerHTML=
+    '<div style="background:linear-gradient(135deg,#1a0800,#0f0000);border:2px solid #ffaa00;border-radius:16px;padding:28px;max-width:300px;width:90%;text-align:center;box-shadow:0 0 60px #ffaa0066,0 0 120px #ffaa0022;position:relative;overflow:hidden">'+
+      '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent 40%,rgba(255,170,0,0.08) 50%,transparent 60%);background-size:200% 100%;animation:cardShine 3s linear infinite;pointer-events:none"></div>'+
+      '<div style="font-size:11px;color:#cc8844;letter-spacing:3px;font-weight:700;margin-bottom:10px">НОВА КАРТОЧКА!</div>'+
+      '<div style="font-size:56px;margin-bottom:12px;filter:drop-shadow(0 0 20px #ffaa0088)">'+ico+'</div>'+
+      '<div style="font-size:20px;color:#ffdd44;font-weight:900;margin-bottom:6px;text-shadow:0 0 20px #ffaa0066">'+card.label+'</div>'+
+      '<div style="font-size:12px;color:#cc8844;margin-bottom:4px">'+card.caseName+'</div>'+
+      '<div style="font-size:11px;color:#886633;margin-bottom:18px">'+card.date+'</div>'+
+      '<div style="font-size:10px;color:#664422;margin-bottom:14px">Збережено у профілі</div>'+
+      '<button onclick="this.closest(&quot;div[style*=position\\:fixed]&quot;).remove()" style="padding:12px 32px;background:linear-gradient(135deg,#2a1000,#1a0000);border:2px solid #cc8800;border-radius:8px;color:#ffdd44;font-family:monospace;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:0 0 15px #cc880044">КРУТО!</button>'+
+    '</div>';
+  overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.remove();});
+  document.getElementById('app').appendChild(overlay);
+  playCaseSound('prize');
+}
+
+function showPrizeCards(){
+  try{
+    var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
+    if(!cards.length)return;
+    var container=document.getElementById('sp-body');
+    if(!container)return;
+    var html='<div style="margin:12px 0">'+
+      '<div style="font-size:12px;color:#ffaa00;letter-spacing:2px;font-weight:700;margin-bottom:10px">🏆 КОЛЕКЦІЯ КАРТОК ('+cards.length+')</div>';
+    cards.forEach(function(c){
+      var ico=getPrizeIcon(c.label);
+      html+='<div class="prize-card-mini">'+
+        '<span style="font-size:28px;z-index:1">'+ico+'</span>'+
+        '<div style="z-index:1"><div style="font-size:13px;color:#ffdd44;font-weight:700">'+c.label+'</div>'+
+        '<div style="font-size:10px;color:#886633">'+c.caseName+' · '+c.date+'</div></div></div>';
+    });
+    html+='</div>';
+    container.insertAdjacentHTML('afterbegin',html);
+  }catch(e){}
+}
+
 // ══ DAILY ══
 function buildDaily(){
   var grid=document.getElementById('daily-grid');grid.innerHTML='';
@@ -955,7 +1005,7 @@ function claimDaily(){
   // Reset after 7 days
   if(G.streak>=DAILY_R.length) G.streak=0;
   G.lastClaim=today;
-  buildDaily();updateHUD();
+  buildDaily();buildDailyInTasks();updateHUD();
   try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
   toast('+'+fmt(amt)+' БОЛЮ! 🩸');vibrate([20,10,20,10,30]);dbSave();
 }
@@ -981,6 +1031,7 @@ function renderSP(){
         '<div class="as"><div class="as-l">СЕРІЯ</div><div class="as-v">'+G.streak+' дн.</div></div>'+
         '<div class="as"><div class="as-l">ЗА ТАП</div><div class="as-v">+'+G.cpc+'</div></div>'+
         '<div class="as"><div class="as-l">РІВЕНЬ</div><div class="as-v">'+G.lvl+'</div></div>'+
+        '<div class="as"><div class="as-l">КАРТОК</div><div class="as-v">'+(function(){try{return JSON.parse(localStorage.getItem('ps_prize_cards')||'[]').length;}catch(e){return 0;}}())+'</div></div>'+
       '</div>'+
       '<div style="margin-top:14px;font-size:12px;color:#770000;margin-bottom:6px;font-weight:700;letter-spacing:1px">ЗМІНИТИ НІКНЕЙМ</div>'+
       '<div class="nick-row">'+
@@ -1218,6 +1269,48 @@ function buildDailyInTasks() {
   if (btn) btn.disabled = claimed;
 }
 
+// ══ CASE SOUNDS (CS2-style via Web Audio API) ══
+var audioCtx=null;
+function getAudioCtx(){
+  if(!audioCtx)try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}
+  return audioCtx;
+}
+function playTone(freq,dur,vol,type){
+  var ctx=getAudioCtx();if(!ctx)return;
+  var osc=ctx.createOscillator();
+  var gain=ctx.createGain();
+  osc.type=type||'sine';
+  osc.frequency.setValueAtTime(freq,ctx.currentTime);
+  gain.gain.setValueAtTime(vol||0.15,ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+(dur||0.1));
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start();osc.stop(ctx.currentTime+(dur||0.1));
+}
+function playCaseSound(type){
+  if(type==='tick'){
+    playTone(800,0.03,0.08,'square');
+  } else if(type==='slowtick'){
+    playTone(600,0.05,0.1,'sine');
+  } else if(type==='win'){
+    playTone(523,0.12,0.15,'sine');
+    setTimeout(function(){playTone(659,0.12,0.15,'sine');},120);
+    setTimeout(function(){playTone(784,0.2,0.15,'sine');},240);
+  } else if(type==='bigwin'){
+    playTone(523,0.15,0.2,'sine');
+    setTimeout(function(){playTone(659,0.15,0.2,'sine');},150);
+    setTimeout(function(){playTone(784,0.15,0.2,'sine');},300);
+    setTimeout(function(){playTone(1047,0.3,0.2,'sine');},450);
+  } else if(type==='prize'){
+    [523,659,784,1047,1319].forEach(function(f,i){
+      setTimeout(function(){playTone(f,0.2,0.2,'sine');},i*130);
+    });
+  } else if(type==='common'){
+    playTone(440,0.1,0.1,'sine');
+  } else if(type==='spin'){
+    playTone(220,0.08,0.1,'sawtooth');
+  }
+}
+
 // ══ CASES ══
 var CASES_DEF = [
   {
@@ -1278,8 +1371,6 @@ var CASES_DEF = [
 ];
 
 var caseStats = {opened:0, earned:0, spent:0, best:0};
-var LUCKY_MODE = false; // true = first open after 24h, guaranteed good drop
-var STREAK_MODE = 0;   // counts bad streak after lucky win
 var currentCase = null;
 var caseSpinning = false;
 
@@ -1310,6 +1401,33 @@ function isBlackCaseVisible(){
 function buildCaseCards(){
   var el=document.getElementById('case-cards');if(!el)return;
   el.innerHTML='';
+  // Daily luck indicator
+  var dl=getDailyLuck();
+  var freeLeft=Math.max(0,3-dl.dailyOpens);
+  var resetMs=getLuckResetTimeLeft();
+  var luckPct=Math.round(getLuckMultiplier()*100/2.5*100);
+  var luckColor=luckPct>=80?'#44ff66':luckPct>=50?'#ffaa00':luckPct>=30?'#ff6644':'#cc2222';
+  var luckLabel=luckPct>=80?'ВДАЧА':luckPct>=50?'НОРМ':luckPct>=30?'ПОГАНО':'МІНУС';
+  var resetStr='';
+  if(resetMs>0){
+    var rh=Math.floor(resetMs/3600000),rm=Math.floor((resetMs%3600000)/60000);
+    resetStr=rh+'г '+rm+'хв';
+  }
+  var luckHtml=
+    '<div style="background:#0f0000;border:1px solid #330000;border-radius:10px;padding:12px;margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+        '<span style="font-size:11px;color:#770000;letter-spacing:2px;font-weight:700">УДАЧА СЬОГОДНІ</span>'+
+        '<span style="font-size:13px;color:'+luckColor+';font-weight:900">'+luckLabel+'</span>'+
+      '</div>'+
+      '<div style="height:6px;background:#1a0000;border-radius:3px;overflow:hidden;border:1px solid #2a0000;margin-bottom:8px">'+
+        '<div style="height:100%;width:'+Math.min(100,luckPct)+'%;background:linear-gradient(90deg,'+luckColor+','+luckColor+'88);border-radius:3px;transition:.3s"></div>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between">'+
+        '<span style="font-size:11px;color:#cc5555">'+(freeLeft>0?freeLeft+' вдалих відкриттів':'Удачу використано')+'</span>'+
+        '<span style="font-size:11px;color:#770000">Оновлення: '+(resetMs>0?resetStr:'скоро')+'</span>'+
+      '</div>'+
+    '</div>';
+  el.innerHTML=luckHtml;
   var blackVisible=isBlackCaseVisible();
   CASES_DEF.forEach(function(cas){
     if(cas.isBlack&&!blackVisible)return;
@@ -1373,17 +1491,46 @@ function closeCaseOpener(){
   updateCaseStatsUI();
 }
 
-// Roll weighted drop with casino psychology
+// Roll weighted drop — daily luck system with 24h reset
+function getDailyLuck(){
+  try{
+    var saved=JSON.parse(localStorage.getItem('ps_daily_luck')||'{}');
+    var lastReset=saved.lastReset||0;
+    var dailyOpens=saved.dailyOpens||0;
+    var hrs=(Date.now()-lastReset)/3600000;
+    if(hrs>=24||lastReset===0){
+      dailyOpens=0;
+      lastReset=Date.now();
+      localStorage.setItem('ps_daily_luck',JSON.stringify({lastReset:lastReset,dailyOpens:dailyOpens}));
+    }
+    return {dailyOpens:dailyOpens,lastReset:lastReset};
+  }catch(e){return {dailyOpens:0,lastReset:Date.now()};}
+}
+function incrementDailyOpens(){
+  try{
+    var d=getDailyLuck();
+    d.dailyOpens++;
+    localStorage.setItem('ps_daily_luck',JSON.stringify(d));
+  }catch(e){}
+}
 function getLuckMultiplier(){
-  var now=Date.now(),ft=G.firstCaseTime||0,cnt=G.caseOpenCount||0;
-  if(ft===0||cnt===0)return 4.0;
-  var hrs=(now-ft)/3600000;
-  if(hrs<24&&cnt<=10)return Math.max(1.5,3.0-(1.5*cnt/10));
-  if(cnt<=30)return 0.4;
-  if(cnt<=60)return 0.25;
-  if(cnt<=100)return 0.25+(0.3*(cnt-60)/40);
-  if(cnt<=115)return 1.5;
-  return 0.4;
+  var d=getDailyLuck();
+  var cnt=d.dailyOpens;
+  if(cnt<=3)return 2.5;
+  if(cnt<=6)return 1.8;
+  if(cnt<=10)return 1.0;
+  if(cnt<=15)return 0.5;
+  if(cnt<=25)return 0.3;
+  return 0.2;
+}
+function getLuckResetTimeLeft(){
+  var d=getDailyLuck();
+  var ms=(d.lastReset+24*3600000)-Date.now();
+  return Math.max(0,ms);
+}
+function getDailyOpensLeft(){
+  var d=getDailyLuck();
+  return Math.max(0,3-d.dailyOpens);
 }
 
 function rollDrop(cas){
@@ -1401,16 +1548,7 @@ function rollDrop(cas){
   return cas.drops[cas.drops.length-1];
 }
 
-function checkLuckyMode(){
-  try{
-    var last=parseInt(localStorage.getItem('ps_last_case_open')||'0');
-    var diff=Date.now()-last;
-    if(diff>=24*3600*1000&&last>0){
-      LUCKY_MODE=true;
-    }
-    localStorage.setItem('ps_last_case_open',String(Date.now()));
-  }catch(e){}
-}
+
 
 // Build strip of items
 function buildStrip(cas, finalDrop){
@@ -1419,6 +1557,7 @@ function buildStrip(cas, finalDrop){
   strip.innerHTML='';
   strip.style.transition='none';
   strip.style.transform='translateX(0px)';
+  if(!finalDrop) finalDrop=rollDrop(cas);
   var WIN_IDX=45;
   for(var i=0;i<60;i++){
     var drop;
@@ -1446,7 +1585,6 @@ function buildStrip(cas, finalDrop){
 function openCase(){
   if(!currentCase||caseSpinning)return;
   if(G.pain<currentCase.price){toast('Мало болю! Потрібно '+fmt(currentCase.price));return;}
-  checkLuckyMode();
   caseSpinning=true;
   var btn=document.getElementById('case-spin-btn');
   btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
@@ -1454,12 +1592,9 @@ function openCase(){
 
   G.pain-=currentCase.price;
   caseStats.spent+=currentCase.price;
-  // Track for honeymoon system
-  if(!G.firstCaseTime) G.firstCaseTime = Date.now();
-  G.caseOpenCount = (G.caseOpenCount||0) + 1;
+  incrementDailyOpens();
   updateHUD();
   try{localStorage.setItem('ps_pain_backup',JSON.stringify({pain:G.pain,lvl:G.lvl,nextLvlAt:G.nextLvlAt}));}catch(e){}
-  try{localStorage.setItem('ps_case_luck',JSON.stringify({firstCaseTime:G.firstCaseTime,caseOpenCount:G.caseOpenCount}));}catch(e){}
 
   var result=rollDrop(currentCase);
   buildStrip(currentCase,result);
@@ -1473,26 +1608,33 @@ function openCase(){
   var randOffset=(Math.random()*20-10);
   var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // Phase 1: fast launch
+  // Sound: spin start
+  playCaseSound('spin');
+
+  // Phase 1: fast launch + fast ticks
   strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
   strip.style.transform='translateX('+(-(22*ITEM_W-centerOffset))+'px)';
+  for(var ti=0;ti<12;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*70);})(ti);}
 
-  // Phase 2: full speed
+  // Phase 2: full speed + medium ticks
   setTimeout(function(){
     strip.style.transition='transform 0.7s linear';
     strip.style.transform='translateX('+(-(36*ITEM_W-centerOffset))+'px)';
+    for(var ti=0;ti<7;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*90);})(ti);}
   },950);
 
-  // Phase 3: decelerate
+  // Phase 3: decelerate + slow ticks
   setTimeout(function(){
     strip.style.transition='transform 0.8s cubic-bezier(0.5,0.0,0.9,0.4)';
     strip.style.transform='translateX('+(-(41*ITEM_W-centerOffset))+'px)';
+    for(var ti=0;ti<5;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*150);})(ti);}
   },1700);
 
-  // Phase 4: CS:GO slow crawl
+  // Phase 4: CS:GO slow crawl + rare ticks
   setTimeout(function(){
     strip.style.transition='transform 2.6s cubic-bezier(0.0,0.0,0.05,1.0)';
     strip.style.transform='translateX('+targetX+'px)';
+    for(var ti=0;ti<6;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*400);})(ti);}
   },2550);
 
   // Show result
@@ -1508,28 +1650,31 @@ function openCase(){
   },5250);
 }
 
+function savePrizeCard(label, caseName){
+  var card={
+    id: 'prize_'+Date.now(),
+    label: label,
+    caseId: currentCase?currentCase.id:'unknown',
+    caseName: caseName||'Кейс',
+    date: new Date().toLocaleDateString('uk'),
+    tgId: G.tgId,
+    username: G.username
+  };
+  try{
+    var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
+    cards.push(card);
+    localStorage.setItem('ps_prize_cards',JSON.stringify(cards));
+  }catch(e){}
+  return card;
+}
+
 function showCaseResult(drop){
   var resEl=document.getElementById('case-result');
   caseStats.opened++;
 
   if(drop.prize){
     caseStats.best=-1;
-    // Save prize card
-    var prizeCard={
-      id: drop.prizeId||'prize',
-      label: drop.label,
-      caseId: currentCase.id,
-      caseName: currentCase.name,
-      date: new Date().toLocaleDateString('uk'),
-      tgId: G.tgId,
-      username: G.username
-    };
-    try{
-      var cards=JSON.parse(localStorage.getItem('ps_prize_cards')||'[]');
-      cards.push(prizeCard);
-      localStorage.setItem('ps_prize_cards',JSON.stringify(cards));
-    }catch(e){}
-    // Show prize card overlay
+    var prizeCard=savePrizeCard(drop.label, currentCase.name);
     showPrizeCard(prizeCard);
     resEl.innerHTML='<span style="color:#ffaa00;font-size:18px">🎁 ЛЕГЕНДАРНИЙ ПРИЗ!</span>';
     vibrate([50,20,50,20,100,20,100]);
@@ -1547,9 +1692,16 @@ function showCaseResult(drop){
     caseStats.earned+=drop.val;
     if(drop.val>caseStats.best)caseStats.best=drop.val;
 
+    // Award prize card for huge wins (500K+)
+    if(drop.val>=500000){
+      var bigCard=savePrizeCard('🔥 '+fmt(drop.val)+' болю', currentCase.name);
+      showPrizeCard(bigCard);
+    }
+
     if(drop.val>=300000){
       resEl.innerHTML='<span style="color:#00ff88;font-size:18px">🔥 +'+fmt(drop.val)+' болю!</span>';
       vibrate([40,15,40,15,80]);
+      playCaseSound('bigwin');
       if(G.effectsOn){
         for(var i=0;i<4;i++){(function(d){setTimeout(function(){
           var fl=document.createElement('div');fl.className='flash-el';
@@ -1561,9 +1713,11 @@ function showCaseResult(drop){
     } else if(drop.val>=50000){
       resEl.innerHTML='<span style="color:#ff4444;font-size:16px">💥 +'+fmt(drop.val)+' болю!</span>';
       vibrate([25,10,40]);
+      playCaseSound('win');
     } else {
       resEl.innerHTML='<span style="color:#cc4444">+'+fmt(drop.val)+' болю</span>';
       vibrate(15);
+      playCaseSound('common');
     }
     updateHUD();
   }
@@ -1574,129 +1728,13 @@ function showCaseResult(drop){
 }
 
 
-// ══ TASKS ══
-var TASKS_DEF = [
-  {id:"task_taps_1k",   type:"taps",   target:1000,   reward:500,    title:"1 000 тапів",        desc:"Натисни кнопку 1 000 разів"},
-  {id:"task_taps_5k",   type:"taps",   target:5000,   reward:2000,   title:"5 000 тапів",         desc:"Натисни кнопку 5 000 разів"},
-  {id:"task_taps_20k",  type:"taps",   target:20000,  reward:8000,   title:"20 000 тапів",        desc:"Натисни кнопку 20 000 разів"},
-  {id:"task_taps_100k", type:"taps",   target:100000, reward:40000,  title:"100 000 тапів",       desc:"Натисни кнопку 100 000 разів"},
-  {id:"task_pain_10k",  type:"pain",   target:10000,  reward:1000,   title:"10К болю",            desc:"Назбирай 10 000 болю"},
-  {id:"task_pain_100k", type:"pain",   target:100000, reward:8000,   title:"100К болю",           desc:"Назбирай 100 000 болю"},
-  {id:"task_pain_1m",   type:"pain",   target:1000000,reward:50000,  title:"1М болю",             desc:"Назбирай 1 000 000 болю"},
-  {id:"task_lvl_5",     type:"lvl",    target:5,      reward:3000,   title:"Досягни рівня 5",     desc:"Підніміть свій рівень до 5"},
-  {id:"task_lvl_10",    type:"lvl",    target:10,     reward:10000,  title:"Досягни рівня 10",    desc:"Підніміть свій рівень до 10"},
-  {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
-  {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
-  {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
-  {id:"task_cases_5",   type:"cases",  target:5,      reward:5000,   title:"5 кейсів відкрито",   desc:"Відкрий 5 будь-яких кейсів"},
-  {id:"task_cases_20",  type:"cases",  target:20,     reward:20000,  title:"20 кейсів відкрито",  desc:"Відкрий 20 будь-яких кейсів"},
-  {id:"task_cases_50",  type:"cases",  target:50,     reward:80000,  title:"50 кейсів відкрито",  desc:"Відкрий 50 будь-яких кейсів"},
-];
-
-// Task progress stored in G
-// G.taskProgress = {taps: N, claimed: ['task_id1',...]}
-
-function getTaskProgress(task) {
-  if (!G.taskProgress) G.taskProgress = {};
-  switch(task.type) {
-    case 'taps':   return G.taskProgress.taps || 0;
-    case 'pain':   return G.pain;
-    case 'lvl':    return G.lvl;
-    case 'streak': return G.streak;
-    case 'cases':  return caseStats.opened || 0;
-    default: return 0;
-  }
-}
-
-function buildTasks() {
-  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
-  var list = document.getElementById('tasks-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  // Also rebuild daily
-  buildDailyInTasks();
-
-  TASKS_DEF.forEach(function(task) {
-    var claimed = G.taskProgress.claimed && G.taskProgress.claimed.indexOf(task.id) >= 0;
-    var prog = getTaskProgress(task);
-    var pct = Math.min(100, Math.floor(prog / task.target * 100));
-    var done = prog >= task.target;
-    var canClaim = done && !claimed;
-
-    var d = document.createElement('div');
-    d.className = 'upg-card';
-    d.style.marginBottom = '10px';
-    d.innerHTML =
-      '<div class="upg-top">' +
-        '<span class="upg-name">' + task.title + '</span>' +
-        '<span class="upg-lv" style="color:#ff4444">+' + fmt(task.reward) + '</span>' +
-      '</div>' +
-      '<div class="upg-desc">' + task.desc + '</div>' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
-        '<span style="font-size:12px;color:#cc5555">' + fmt(prog) + ' / ' + fmt(task.target) + '</span>' +
-        '<span style="font-size:12px;color:#770000">' + pct + '%</span>' +
-      '</div>' +
-      '<div class="upg-bar-wrap"><div class="upg-bar" style="width:' + pct + '%"></div></div>' +
-      '<button class="upg-btn" ' + (claimed || !done ? 'disabled' : '') +
-        ' onclick="claimTask(&quot;' + task.id + '&quot;)">' +
-        (claimed ? '✓ ОТРИМАНО' : done ? 'ЗАБРАТИ НАГОРОДУ' : 'В ПРОЦЕСІ...') +
-      '</button>';
-    list.appendChild(d);
-  });
-}
-
-function claimTask(id) {
-  var task = TASKS_DEF.find(function(t){ return t.id === id; });
-  if (!task) return;
-  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
-  if (G.taskProgress.claimed.indexOf(id) >= 0) return;
-  var prog = getTaskProgress(task);
-  if (prog < task.target) return;
-  G.pain += task.reward;
-  G.taskProgress.claimed.push(id);
-  buildTasks();
-  updateHUD();
-  toast('Завдання виконано! +' + fmt(task.reward) + ' болю 🎯');
-  vibrate([20,10,40]);
-  dbSave();
-}
-
-function buildDailyInTasks() {
-  var grid = document.getElementById('daily-grid2');
-  var lbl = document.getElementById('claim-lbl2');
-  var btn = document.getElementById('claim-btn2');
-  if (!grid) return;
-  grid.innerHTML = '';
-  var today = new Date().toDateString();
-  var claimed = G.lastClaim === today;
-  DAILY_R.forEach(function(amt, i) {
-    var d = document.createElement('div');
-    d.className = 'day-box' + (i < G.streak ? ' done' : i === G.streak ? ' today' : '');
-    d.innerHTML = '<div class="day-num">'+(i+1)+'</div><div class="day-amt">+'+fmt(amt)+'</div>';
-    grid.appendChild(d);
-  });
-  var idx = Math.min(G.streak, DAILY_R.length-1);
-  if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
-  if (btn) btn.disabled = claimed;
-}
-
-// ══ CASINO ══
-var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤','😈','⚰️','🕸️'];
-// Weighted: rare symbols appear less
-var SYMBOL_WEIGHTS = [3,3,4,4,2,6,6,5,5,6]; // lower = rarer (💀=3, 💎=2)
-var PAYOUTS = {'💀💀💀':15,'💎💎💎':10,'🩸🩸🩸':6,'🔥🔥🔥':4,'⚡⚡⚡':3};
-var casinoBet = 100;
+// ══ CASINO & BLACKJACK ══
 var bjBet = 100;
-var casinoSpinning = false;
 var casinoStats = {spins:0, wins:0, earned:0, lost:0};
-
 function loadCasinoStats(){
   try{var s=JSON.parse(localStorage.getItem('ps_casino')||'{}');
-    if(s.spins)casinoStats.spins=s.spins;
-    if(s.wins)casinoStats.wins=s.wins;
-    if(s.earned)casinoStats.earned=s.earned;
-    if(s.lost)casinoStats.lost=s.lost;
+    if(s.spins)casinoStats.spins=s.spins;if(s.wins)casinoStats.wins=s.wins;
+    if(s.earned)casinoStats.earned=s.earned;if(s.lost)casinoStats.lost=s.lost;
   }catch(e){}
 }
 function saveCasinoStats(){try{localStorage.setItem('ps_casino',JSON.stringify(casinoStats));}catch(e){}}
@@ -1706,155 +1744,6 @@ function updateCasinoStatsUI(){
   if(s)s.textContent=casinoStats.spins;if(w)w.textContent=casinoStats.wins;
   if(e)e.textContent=fmt(casinoStats.earned);if(l)l.textContent=fmt(casinoStats.lost);
 }
-
-function casinoTab(t){
-  document.getElementById('casino-slots').style.display=t==='slots'?'block':'none';
-  document.getElementById('casino-bj').style.display=t==='bj'?'block':'none';
-  document.getElementById('ctab-slots').style.background=t==='slots'?'#1f0000':'#0f0000';
-  document.getElementById('ctab-slots').style.color=t==='slots'?'#ff4444':'#550000';
-  document.getElementById('ctab-bj').style.background=t==='bj'?'#1f0000':'#0f0000';
-  document.getElementById('ctab-bj').style.color=t==='bj'?'#ff4444':'#550000';
-}
-
-function setBet(amount,el){
-  casinoBet=amount;
-  document.getElementById('current-bet-display').textContent=fmt(amount)+' болю';
-  document.querySelectorAll('#casino-slots .bet-btn').forEach(function(b){b.classList.remove('active');});
-  if(el)el.classList.add('active');
-}
-function setCustomBet(){
-  var input=document.getElementById('custom-bet');
-  var val=parseInt(input.value)||0;
-  if(val<1){toast('Мінімум 1');return;}
-  casinoBet=val;
-  document.getElementById('current-bet-display').textContent=fmt(val)+' болю';
-  document.querySelectorAll('#casino-slots .bet-btn').forEach(function(b){b.classList.remove('active');});
-}
-
-// Weighted random symbol
-function randSymbol(){
-  var total=SYMBOL_WEIGHTS.reduce(function(a,b){return a+b;},0);
-  var r=Math.random()*total,cum=0;
-  for(var i=0;i<SYMBOLS.length;i++){cum+=SYMBOL_WEIGHTS[i];if(r<cum)return SYMBOLS[i];}
-  return SYMBOLS[0];
-}
-
-// Build reel track with symbols
-function buildReelTrack(trackId, finalSymbol){
-  var track=document.getElementById(trackId);
-  if(!track)return;
-  track.innerHTML='';
-  // 20 random symbols + final at bottom
-  var syms=[];
-  for(var i=0;i<20;i++)syms.push(randSymbol());
-  syms.push(finalSymbol);
-  syms.forEach(function(s){
-    var div=document.createElement('div');div.className='reel-symbol';div.textContent=s;
-    track.appendChild(div);
-  });
-  // Start at top
-  track.style.transition='none';
-  track.style.transform='translateY(0)';
-}
-
-function animateReel(trackId, duration, cb){
-  var track=document.getElementById(trackId);
-  if(!track)return;
-  var totalH=track.children.length*76;
-  var finalY=-(totalH-76); // show last symbol
-  track.style.transition='transform '+duration+'ms cubic-bezier(0.25,0.1,0.25,1)';
-  track.style.transform='translateY('+finalY+'px)';
-  setTimeout(cb||function(){},duration+50);
-}
-
-function spinSlots(){
-  if(casinoSpinning)return;
-  if(G.pain<casinoBet){toast('Мало болю!');return;}
-  casinoSpinning=true;
-  var btn=document.getElementById('spin-btn');
-  btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
-
-  G.pain-=casinoBet;
-  casinoStats.spins++;casinoStats.lost+=casinoBet;
-  updateHUD();
-
-  // Clear winners
-  [1,2,3].forEach(function(i){
-    var w=document.querySelector('.reel-wrap:nth-child('+i+')');
-    if(w)w.classList.remove('winner');
-  });
-  document.getElementById('casino-result').textContent='';
-
-  // Pick results with weighted random (biased toward loss)
-  // House edge ~85% loss rate
-  var loseRoll=Math.random();
-  var r1,r2,r3;
-  if(loseRoll<0.85){
-    // Force loss - all different
-    var pool=[...SYMBOLS];
-    r1=pool[Math.floor(Math.random()*pool.length)];
-    do{r2=pool[Math.floor(Math.random()*pool.length)];}while(r2===r1);
-    do{r3=pool[Math.floor(Math.random()*pool.length)];}while(r3===r1||r3===r2);
-  } else if(loseRoll<0.93){
-    // Pair (x1.5)
-    r1=randSymbol();r2=r1;
-    do{r3=randSymbol();}while(r3===r1);
-    // shuffle
-    var arr=[r1,r2,r3];arr.sort(function(){return Math.random()-0.5;});
-    r1=arr[0];r2=arr[1];r3=arr[2];
-  } else if(loseRoll<0.96){r1=r2=r3='⚡';} // x3
-  else if(loseRoll<0.98){r1=r2=r3='🔥';}   // x4
-  else if(loseRoll<0.99){r1=r2=r3='🩸';}   // x6
-  else if(loseRoll<0.997){r1=r2=r3='💎';}  // x10
-  else{r1=r2=r3='💀';}                      // x15 JACKPOT
-
-  // Build and animate reels
-  buildReelTrack('track-1',r1);
-  buildReelTrack('track-2',r2);
-  buildReelTrack('track-3',r3);
-
-  // Animate sequentially
-  setTimeout(function(){animateReel('track-1',900,null);},100);
-  setTimeout(function(){animateReel('track-2',1100,null);},300);
-  setTimeout(function(){animateReel('track-3',1300,function(){
-    setTimeout(function(){showSlotResult(r1,r2,r3);},200);
-  });},500);
-}
-
-function showSlotResult(r1,r2,r3){
-  var combo=r1+r2+r3;var mult=0;
-  if(PAYOUTS[combo])mult=PAYOUTS[combo];
-  else if(r1===r2||r2===r3||r1===r3)mult=1.5;
-
-  var resultEl=document.getElementById('casino-result');
-  // Highlight winners
-  var reelWraps=document.querySelectorAll('#casino-slots .reel-wrap');
-  if(mult>0){
-    var won=Math.floor(casinoBet*mult);
-    G.pain+=won;
-    casinoStats.wins++;casinoStats.earned+=won;casinoStats.lost-=casinoBet;
-    if(r1===r2){reelWraps[0]&&reelWraps[0].classList.add('winner');reelWraps[1]&&reelWraps[1].classList.add('winner');}
-    if(r2===r3){reelWraps[1]&&reelWraps[1].classList.add('winner');reelWraps[2]&&reelWraps[2].classList.add('winner');}
-    if(r1===r3){reelWraps[0]&&reelWraps[0].classList.add('winner');reelWraps[2]&&reelWraps[2].classList.add('winner');}
-    if(mult>=10){
-      resultEl.innerHTML='<span style="color:#ffdd00;font-size:16px">🏆 ДЖЕКПОТ! +'+fmt(won)+'</span>';
-      vibrate([50,20,50,20,100]);
-      if(G.effectsOn)for(var i=0;i<5;i++){(function(d){setTimeout(function(){var fl=document.createElement('div');fl.className='flash-el';fl.style.background='rgba(200,150,0,0.15)';document.getElementById('app').appendChild(fl);setTimeout(function(){if(fl.parentNode)fl.remove();},450);},d*150);})(i);}
-    } else if(mult>=4){
-      resultEl.innerHTML='<span style="color:#ff4444">🎉 ВИГРАШ! +'+fmt(won)+'</span>';vibrate([30,10,30]);
-    } else {
-      resultEl.innerHTML='<span style="color:#cc4444">✓ +'+fmt(won)+'</span>';vibrate(20);
-    }
-  } else {
-    resultEl.innerHTML='<span style="color:#330000">✗ Не пощастило</span>';
-  }
-
-  updateHUD();updateCasinoStatsUI();saveCasinoStats();dbSave();
-  var btn=document.getElementById('spin-btn');btn.disabled=false;btn.textContent='🎰 КРУТИТИ';
-  casinoSpinning=false;
-}
-
-// ══ BLACKJACK ══
 var BJ = {deck:[],player:[],dealer:[],state:'idle'};
 
 function bjCardValue(card){
@@ -1987,259 +1876,6 @@ function bjEnd(reason){
 }
 
 
-// ══ TASKS ══
-var TASKS_DEF = [
-  {id:"task_taps_1k",   type:"taps",   target:1000,   reward:500,    title:"1 000 тапів",        desc:"Натисни кнопку 1 000 разів"},
-  {id:"task_taps_5k",   type:"taps",   target:5000,   reward:2000,   title:"5 000 тапів",         desc:"Натисни кнопку 5 000 разів"},
-  {id:"task_taps_20k",  type:"taps",   target:20000,  reward:8000,   title:"20 000 тапів",        desc:"Натисни кнопку 20 000 разів"},
-  {id:"task_taps_100k", type:"taps",   target:100000, reward:40000,  title:"100 000 тапів",       desc:"Натисни кнопку 100 000 разів"},
-  {id:"task_pain_10k",  type:"pain",   target:10000,  reward:1000,   title:"10К болю",            desc:"Назбирай 10 000 болю"},
-  {id:"task_pain_100k", type:"pain",   target:100000, reward:8000,   title:"100К болю",           desc:"Назбирай 100 000 болю"},
-  {id:"task_pain_1m",   type:"pain",   target:1000000,reward:50000,  title:"1М болю",             desc:"Назбирай 1 000 000 болю"},
-  {id:"task_lvl_5",     type:"lvl",    target:5,      reward:3000,   title:"Досягни рівня 5",     desc:"Підніміть свій рівень до 5"},
-  {id:"task_lvl_10",    type:"lvl",    target:10,     reward:10000,  title:"Досягни рівня 10",    desc:"Підніміть свій рівень до 10"},
-  {id:"task_lvl_20",    type:"lvl",    target:20,     reward:30000,  title:"Досягни рівня 20",    desc:"Підніміть свій рівень до 20"},
-  {id:"task_streak_3",  type:"streak", target:3,      reward:2000,   title:"Серія 3 дні",         desc:"Заходь в гру 3 дні поспіль"},
-  {id:"task_streak_7",  type:"streak", target:7,      reward:7000,   title:"Серія 7 днів",        desc:"Заходь в гру 7 днів поспіль"},
-  {id:"task_cases_5",   type:"cases",  target:5,      reward:5000,   title:"5 кейсів відкрито",   desc:"Відкрий 5 будь-яких кейсів"},
-  {id:"task_cases_20",  type:"cases",  target:20,     reward:20000,  title:"20 кейсів відкрито",  desc:"Відкрий 20 будь-яких кейсів"},
-  {id:"task_cases_50",  type:"cases",  target:50,     reward:80000,  title:"50 кейсів відкрито",  desc:"Відкрий 50 будь-яких кейсів"},
-];
-
-// Task progress stored in G
-// G.taskProgress = {taps: N, claimed: ['task_id1',...]}
-
-function getTaskProgress(task) {
-  if (!G.taskProgress) G.taskProgress = {};
-  switch(task.type) {
-    case 'taps':   return G.taskProgress.taps || 0;
-    case 'pain':   return G.pain;
-    case 'lvl':    return G.lvl;
-    case 'streak': return G.streak;
-    case 'cases':  return caseStats.opened || 0;
-    default: return 0;
-  }
-}
-
-function buildTasks() {
-  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
-  var list = document.getElementById('tasks-list');
-  if (!list) return;
-  list.innerHTML = '';
-
-  // Also rebuild daily
-  buildDailyInTasks();
-
-  TASKS_DEF.forEach(function(task) {
-    var claimed = G.taskProgress.claimed && G.taskProgress.claimed.indexOf(task.id) >= 0;
-    var prog = getTaskProgress(task);
-    var pct = Math.min(100, Math.floor(prog / task.target * 100));
-    var done = prog >= task.target;
-    var canClaim = done && !claimed;
-
-    var d = document.createElement('div');
-    d.className = 'upg-card';
-    d.style.marginBottom = '10px';
-    d.innerHTML =
-      '<div class="upg-top">' +
-        '<span class="upg-name">' + task.title + '</span>' +
-        '<span class="upg-lv" style="color:#ff4444">+' + fmt(task.reward) + '</span>' +
-      '</div>' +
-      '<div class="upg-desc">' + task.desc + '</div>' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
-        '<span style="font-size:12px;color:#cc5555">' + fmt(prog) + ' / ' + fmt(task.target) + '</span>' +
-        '<span style="font-size:12px;color:#770000">' + pct + '%</span>' +
-      '</div>' +
-      '<div class="upg-bar-wrap"><div class="upg-bar" style="width:' + pct + '%"></div></div>' +
-      '<button class="upg-btn" ' + (claimed || !done ? 'disabled' : '') +
-        ' onclick="claimTask(&quot;' + task.id + '&quot;)">' +
-        (claimed ? '✓ ОТРИМАНО' : done ? 'ЗАБРАТИ НАГОРОДУ' : 'В ПРОЦЕСІ...') +
-      '</button>';
-    list.appendChild(d);
-  });
-}
-
-function claimTask(id) {
-  var task = TASKS_DEF.find(function(t){ return t.id === id; });
-  if (!task) return;
-  if (!G.taskProgress) G.taskProgress = {taps:0, claimed:[]};
-  if (G.taskProgress.claimed.indexOf(id) >= 0) return;
-  var prog = getTaskProgress(task);
-  if (prog < task.target) return;
-  G.pain += task.reward;
-  G.taskProgress.claimed.push(id);
-  buildTasks();
-  updateHUD();
-  toast('Завдання виконано! +' + fmt(task.reward) + ' болю 🎯');
-  vibrate([20,10,40]);
-  dbSave();
-}
-
-function buildDailyInTasks() {
-  var grid = document.getElementById('daily-grid2');
-  var lbl = document.getElementById('claim-lbl2');
-  var btn = document.getElementById('claim-btn2');
-  if (!grid) return;
-  grid.innerHTML = '';
-  var today = new Date().toDateString();
-  var claimed = G.lastClaim === today;
-  DAILY_R.forEach(function(amt, i) {
-    var d = document.createElement('div');
-    d.className = 'day-box' + (i < G.streak ? ' done' : i === G.streak ? ' today' : '');
-    d.innerHTML = '<div class="day-num">'+(i+1)+'</div><div class="day-amt">+'+fmt(amt)+'</div>';
-    grid.appendChild(d);
-  });
-  var idx = Math.min(G.streak, DAILY_R.length-1);
-  if (lbl) lbl.innerHTML = (claimed?'Завтра: ':'Сьогодні: ') + '<span style="color:#ff3333;font-weight:900">+'+fmt(DAILY_R[idx])+'</span>';
-  if (btn) btn.disabled = claimed;
-}
-
-// ══ CASINO ══
-var SYMBOLS = ['💀','🩸','🔥','⚡','💎','🎭','🖤','😈','⚰️','🕸️'];
-// Weighted: rare symbols appear less
-var SYMBOL_WEIGHTS = [3,3,4,4,2,6,6,5,5,6]; // lower = rarer (💀=3, 💎=2)
-var PAYOUTS = {'💀💀💀':15,'💎💎💎':10,'🩸🩸🩸':6,'🔥🔥🔥':4,'⚡⚡⚡':3};
-var casinoBet = 100;
-var bjBet = 100;
-var casinoSpinning = false;
-var casinoStats = {spins:0, wins:0, earned:0, lost:0};
-
-function loadCasinoStats(){
-  try{var s=JSON.parse(localStorage.getItem('ps_casino')||'{}');
-    if(s.spins)casinoStats.spins=s.spins;
-    if(s.wins)casinoStats.wins=s.wins;
-    if(s.earned)casinoStats.earned=s.earned;
-    if(s.lost)casinoStats.lost=s.lost;
-  }catch(e){}
-}
-function saveCasinoStats(){
-  try{localStorage.setItem('ps_casino',JSON.stringify(casinoStats));}catch(e){}
-}
-function updateCasinoStatsUI(){
-  var s=document.getElementById('stat-spins');var w=document.getElementById('stat-wins');
-  var e=document.getElementById('stat-earned');var l=document.getElementById('stat-lost');
-  if(s)s.textContent=casinoStats.spins;
-  if(w)w.textContent=casinoStats.wins;
-  if(e)e.textContent=fmt(casinoStats.earned);
-  if(l)l.textContent=fmt(casinoStats.lost);
-}
-
-function setBet(amount){
-  casinoBet=amount;
-  document.getElementById('current-bet-display').textContent=fmt(amount)+' болю';
-  document.querySelectorAll('.bet-btn').forEach(function(b){b.classList.remove('active');});
-  event.target.classList.add('active');
-}
-function setCustomBet(){
-  var input=document.getElementById('custom-bet');
-  var val=parseInt(input.value)||0;
-  if(val<1){toast('Мінімальна ставка: 1');return;}
-  if(val>G.pain){toast('Мало болю!');return;}
-  casinoBet=val;
-  document.getElementById('current-bet-display').textContent=fmt(val)+' болю';
-  document.querySelectorAll('.bet-btn').forEach(function(b){b.classList.remove('active');});
-}
-
-function spinSlots(){
-  if(casinoSpinning)return;
-  if(G.pain<casinoBet){toast('Мало болю для ставки!');return;}
-  if(casinoBet<1){toast('Встанови ставку!');return;}
-
-  casinoSpinning=true;
-  var btn=document.getElementById('spin-btn');
-  btn.disabled=true;btn.textContent='⏳ КРУТИТЬСЯ...';
-
-  // Deduct bet
-  G.pain-=casinoBet;
-  casinoStats.spins++;
-  casinoStats.lost+=casinoBet;
-  updateHUD();
-
-  // Clear winner class
-  ['reel-1','reel-2','reel-3'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el)el.parentNode.classList.remove('winner');
-    if(el)el.classList.add('spinning');
-  });
-  document.getElementById('casino-result').textContent='';
-
-  // Pick results
-  var r1=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-  var r2=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-  var r3=SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
-
-  // Reveal one by one
-  setTimeout(function(){
-    var el=document.getElementById('reel-1');
-    el.classList.remove('spinning');el.textContent=r1;
-  },600);
-  setTimeout(function(){
-    var el=document.getElementById('reel-2');
-    el.classList.remove('spinning');el.textContent=r2;
-  },1000);
-  setTimeout(function(){
-    var el=document.getElementById('reel-3');
-    el.classList.remove('spinning');el.textContent=r3;
-    // Check result
-    setTimeout(function(){showCasinoResult(r1,r2,r3);},200);
-  },1400);
-}
-
-function showCasinoResult(r1,r2,r3){
-  var combo=r1+r2+r3;
-  var resultEl=document.getElementById('casino-result');
-  var mult=0;
-
-  if(PAYOUTS[combo]){
-    mult=PAYOUTS[combo];
-  } else if(r1===r2||r2===r3||r1===r3){
-    mult=1.5;
-  }
-
-  if(mult>0){
-    var won=Math.floor(casinoBet*mult);
-    G.pain+=won;
-    casinoStats.wins++;
-    casinoStats.earned+=won;
-    casinoStats.lost-=casinoBet; // correct: didn't lose this time
-    // Highlight winners
-    if(r1===r2||r1===r3){document.getElementById('reel-1').parentNode.classList.add('winner');}
-    if(r2===r1||r2===r3){document.getElementById('reel-2').parentNode.classList.add('winner');}
-    if(r3===r1||r3===r2){document.getElementById('reel-3').parentNode.classList.add('winner');}
-    if(mult>=5){
-      resultEl.innerHTML='<span style="color:#ffdd00;font-size:18px">🏆 ДЖЕКПОТ! +'+fmt(won)+' болю!</span>';
-      vibrate([50,20,50,20,100]);
-      if(G.effectsOn){
-        for(var i=0;i<5;i++){
-          (function(d){setTimeout(function(){
-            var fl=document.createElement('div');fl.className='flash-el';
-            fl.style.background='rgba(200,150,0,0.15)';
-            document.getElementById('app').appendChild(fl);
-            setTimeout(function(){if(fl.parentNode)fl.remove();},450);
-          },d*150);})(i);
-        }
-      }
-    } else if(mult>=3){
-      resultEl.innerHTML='<span style="color:#ff4444">🎉 ВИГРАШ! +'+fmt(won)+' болю!</span>';
-      vibrate([30,10,30]);
-    } else {
-      resultEl.innerHTML='<span style="color:#cc4444">✓ Маленький виграш! +'+fmt(won)+' болю</span>';
-      vibrate(20);
-    }
-  } else {
-    resultEl.innerHTML='<span style="color:#440000">✗ Не пощастило. Спробуй ще!</span>';
-  }
-
-  updateHUD();
-  updateCasinoStatsUI();
-  saveCasinoStats();
-  dbSave();
-
-  var btn=document.getElementById('spin-btn');
-  btn.disabled=false;btn.textContent='🎰 КРУТИТИ';
-  casinoSpinning=false;
-}
-
 // ══ NAV ══
 function nav(page,el){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on');});
@@ -2314,18 +1950,17 @@ window.addEventListener('pagehide', function(){
 
 // ══ ONLINE COUNTER ══
 async function updateOnline(){
+  var el=document.getElementById('online-count');
+  if(!el)return;
   try{
-    // Count players updated in last 3 minutes
-    var since=new Date(Date.now()-3*60*1000).toISOString();
-    var res=await sb.from('players').select('tg_id, updated_at',{count:'exact',head:true}).gte('updated_at',since);
-    var n=(res.count||1);
-    // Add some random variance to feel real
-    n=Math.max(1,n+Math.floor(Math.random()*3));
-    var el=document.getElementById('online-count');
-    if(el)el.textContent=n+' онлайн';
+    var since=new Date(Date.now()-5*60*1000).toISOString();
+    var res=await sb.from('players').select('tg_id',{count:'exact',head:true}).gte('updated_at',since);
+    var n=res.count;
+    if(n==null||n<1)n=1;
+    n=Math.max(1,n+Math.floor(Math.random()*2));
+    el.textContent=n+' онлайн';
   }catch(e){
-    var el=document.getElementById('online-count');
-    if(el)el.textContent='1 онлайн';
+    el.textContent='1 онлайн';
   }
 }
 
@@ -2447,12 +2082,7 @@ async function init(){
   }
   loadSettings();
   loadCaseStats();
-  // Load honeymoon data
-  try{
-    var lk=JSON.parse(localStorage.getItem('ps_case_luck')||'{}');
-    if(lk.firstCaseTime) G.firstCaseTime=lk.firstCaseTime;
-    if(lk.caseOpenCount) G.caseOpenCount=lk.caseOpenCount;
-  }catch(e){}
+  
   recalc();startRegen();updateHUD();
   updateOnline();
   // Show admin button in profile if admin
