@@ -1269,9 +1269,13 @@ function buildDailyInTasks() {
   if (btn) btn.disabled = claimed;
 }
 
-// ══ CASE SOUNDS (CS2-style — single pre-built WAV per sound) ══
+// ══ CASE SOUNDS (CS2-style — tick per item, synced to animation) ══
 var csSounds={};
-var csSpinAudio=null;
+var csTickPool=[];
+var csTickIdx=0;
+var CS_TICK_POOL=6;
+var csRafId=null;
+var csLastItem=-1;
 function buildWav(samples,sr){
   var len=samples.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
   function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}
@@ -1284,57 +1288,64 @@ function buildWav(samples,sr){
   for(var i=0;i<bytes.length;i++)b64+=String.fromCharCode(bytes[i]);
   return 'data:audio/wav;base64,'+btoa(b64);
 }
-function genSpinWav(){
-  var sr=22050,dur=5.3,len=Math.ceil(sr*dur),samples=new Float64Array(len);
-  // CS2-style: ticks that start fast and decelerate
-  // ~45 items pass during spin, ticks get slower over time
-  var tickFreq=900,tickDur=0.012;
-  var totalTicks=42;
-  for(var tk=0;tk<totalTicks;tk++){
-    // Time of each tick: starts fast, exponentially slower
-    var progress=tk/totalTicks;
-    var tickTime=dur*Math.pow(progress,0.55);
-    var startSample=Math.floor(tickTime*sr);
-    var tickSamples=Math.ceil(tickDur*sr);
-    // Higher pitch at start, lower at end (like CS2)
-    var freq=tickFreq*(1-progress*0.3);
-    var vol=0.5+0.3*(1-progress);
-    for(var i=0;i<tickSamples&&(startSample+i)<len;i++){
-      var t=i/sr;
-      var env=vol*(1-i/tickSamples);
-      samples[startSample+i]+=Math.sin(2*Math.PI*freq*t)*env*32767;
-    }
+function genTickWav(){
+  var sr=44100,dur=0.018,len=Math.ceil(sr*dur),samples=new Float64Array(len);
+  for(var i=0;i<len;i++){
+    var t=i/sr;
+    var env=Math.exp(-t*250)*0.7;
+    var s=Math.sin(2*Math.PI*1200*t)*0.5+Math.sin(2*Math.PI*2000*t)*0.3+Math.sin(2*Math.PI*800*t)*0.2;
+    samples[i]=s*env*32767;
   }
-  // Clamp
-  for(var i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
   return buildWav(samples,sr);
 }
 function genResultWav(type){
-  var sr=22050,dur=0.4,notes=[];
-  if(type==='common'){notes=[{f:440,s:0,d:0.15}];dur=0.2;}
-  else if(type==='win'){notes=[{f:523,s:0,d:0.15},{f:659,s:0.12,d:0.15},{f:784,s:0.24,d:0.2}];dur=0.5;}
-  else if(type==='bigwin'){notes=[{f:523,s:0,d:0.15},{f:659,s:0.13,d:0.15},{f:784,s:0.26,d:0.15},{f:1047,s:0.4,d:0.3}];dur=0.75;}
-  else if(type==='prize'){notes=[{f:523,s:0,d:0.2},{f:659,s:0.12,d:0.2},{f:784,s:0.24,d:0.2},{f:1047,s:0.36,d:0.2},{f:1319,s:0.48,d:0.3}];dur=0.85;}
+  var sr=44100,dur=0.4,notes=[];
+  if(type==='common'){notes=[{f:880,s:0,d:0.12}];dur=0.15;}
+  else if(type==='win'){notes=[{f:523,s:0,d:0.12},{f:659,s:0.1,d:0.12},{f:784,s:0.2,d:0.18}];dur=0.45;}
+  else if(type==='bigwin'){notes=[{f:523,s:0,d:0.12},{f:659,s:0.1,d:0.12},{f:784,s:0.2,d:0.12},{f:1047,s:0.32,d:0.25}];dur=0.6;}
+  else if(type==='prize'){notes=[{f:523,s:0,d:0.15},{f:659,s:0.1,d:0.15},{f:784,s:0.2,d:0.15},{f:1047,s:0.3,d:0.15},{f:1319,s:0.4,d:0.25}];dur=0.7;}
   var len=Math.ceil(sr*dur),samples=new Float64Array(len);
   notes.forEach(function(n){
     var start=Math.floor(n.s*sr),nd=Math.ceil(n.d*sr);
     for(var i=0;i<nd&&(start+i)<len;i++){
-      var t=i/sr,env=0.6*(1-i/nd);
+      var t=i/sr,env=0.55*Math.exp(-t/n.d*3);
       samples[start+i]+=Math.sin(2*Math.PI*n.f*t)*env*32767;
     }
   });
   for(var i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
   return buildWav(samples,sr);
 }
+function playTick(){
+  try{
+    var a=csTickPool[csTickIdx%CS_TICK_POOL];
+    a.currentTime=0;
+    a.play().catch(function(){});
+    csTickIdx++;
+  }catch(e){}
+}
+function startTickTracking(strip,centerOff,itemW){
+  csLastItem=-1;csTickIdx=0;
+  if(csRafId)cancelAnimationFrame(csRafId);
+  function frame(){
+    try{
+      var st=getComputedStyle(strip);
+      var m=st.transform||st.webkitTransform;
+      if(m&&m!=='none'){
+        var v=m.match(/matrix.*\((.+)\)/);
+        if(v){var tx=parseFloat(v[1].split(',')[4])||0;
+          var cur=Math.floor((-tx+centerOff)/itemW);
+          if(cur!==csLastItem&&cur>=0){csLastItem=cur;playTick();}
+        }
+      }
+    }catch(e){}
+    csRafId=requestAnimationFrame(frame);
+  }
+  csRafId=requestAnimationFrame(frame);
+}
+function stopTickTracking(){if(csRafId){cancelAnimationFrame(csRafId);csRafId=null;}}
 function playCaseSound(type){
   try{
-    if(type==='spin'){
-      if(!csSounds.spin)csSounds.spin=genSpinWav();
-      if(csSpinAudio){csSpinAudio.pause();csSpinAudio.currentTime=0;}
-      csSpinAudio=new Audio(csSounds.spin);
-      csSpinAudio.volume=0.4;
-      csSpinAudio.play().catch(function(){});
-    } else if(type==='common'||type==='win'||type==='bigwin'||type==='prize'){
+    if(type==='common'||type==='win'||type==='bigwin'||type==='prize'){
       if(!csSounds[type])csSounds[type]=genResultWav(type);
       var a=new Audio(csSounds[type]);
       a.volume=0.5;
@@ -1342,10 +1353,11 @@ function playCaseSound(type){
     }
   }catch(e){}
 }
-// Pre-generate all sounds on page load
+// Pre-generate all sounds + tick pool on page load
 setTimeout(function(){
   try{
-    csSounds.spin=genSpinWav();
+    var tickUrl=genTickWav();
+    for(var i=0;i<CS_TICK_POOL;i++){csTickPool[i]=new Audio(tickUrl);csTickPool[i].volume=0.35;}
     csSounds.common=genResultWav('common');
     csSounds.win=genResultWav('win');
     csSounds.bigwin=genResultWav('bigwin');
@@ -1650,8 +1662,8 @@ function openCase(){
   var randOffset=(Math.random()*20-10);
   var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // CS2-style spin sound — single audio with decelerating ticks
-  playCaseSound('spin');
+  // Start tick tracking — plays a tick each time an item crosses center
+  startTickTracking(strip,centerOffset,ITEM_W);
 
   // Phase 1: fast launch
   strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
@@ -1677,6 +1689,7 @@ function openCase(){
 
   // Show result
   setTimeout(function(){
+    stopTickTracking();
     var winEl=strip.children[WIN_IDX];
     if(winEl)winEl.className='strip-item '+result.rarity+' win';
     setTimeout(function(){
