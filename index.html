@@ -1269,69 +1269,89 @@ function buildDailyInTasks() {
   if (btn) btn.disabled = claimed;
 }
 
-// ══ CASE SOUNDS (CS2-style, pre-generated WAV data URLs) ══
-var soundCache={};
-function genWav(freq,dur,vol,waveType){
-  var sr=22050,len=Math.ceil(sr*dur),buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
+// ══ CASE SOUNDS (CS2-style — single pre-built WAV per sound) ══
+var csSounds={};
+var csSpinAudio=null;
+function buildWav(samples,sr){
+  var len=samples.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
   function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}
   ws(0,'RIFF');v.setUint32(4,36+len*2,true);ws(8,'WAVE');ws(12,'fmt ');
   v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
   v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);
   v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,len*2,true);
-  for(var i=0;i<len;i++){
-    var t=i/sr,env=vol*Math.max(0,1-t/dur);
-    var s=0;
-    if(waveType==='square') s=Math.sin(2*Math.PI*freq*t)>0?1:-1;
-    else if(waveType==='sawtooth') s=2*(freq*t%1)-1;
-    else s=Math.sin(2*Math.PI*freq*t);
-    v.setInt16(44+i*2,Math.max(-32768,Math.min(32767,s*env*32767)),true);
-  }
-  var b64='',bytes=new Uint8Array(buf);
+  for(var i=0;i<len;i++)v.setInt16(44+i*2,Math.max(-32768,Math.min(32767,samples[i])),true);
+  var bytes=new Uint8Array(buf),b64='';
   for(var i=0;i<bytes.length;i++)b64+=String.fromCharCode(bytes[i]);
   return 'data:audio/wav;base64,'+btoa(b64);
 }
-function playWav(freq,dur,vol,waveType){
-  try{
-    var key=freq+'_'+dur+'_'+(waveType||'sine');
-    if(!soundCache[key])soundCache[key]=genWav(freq,dur,vol||0.15,waveType||'sine');
-    var a=new Audio(soundCache[key]);
-    a.volume=Math.min(1,vol||0.15);
-    a.play().catch(function(){});
-  }catch(e){}
+function genSpinWav(){
+  var sr=22050,dur=5.3,len=Math.ceil(sr*dur),samples=new Float64Array(len);
+  // CS2-style: ticks that start fast and decelerate
+  // ~45 items pass during spin, ticks get slower over time
+  var tickFreq=900,tickDur=0.012;
+  var totalTicks=42;
+  for(var tk=0;tk<totalTicks;tk++){
+    // Time of each tick: starts fast, exponentially slower
+    var progress=tk/totalTicks;
+    var tickTime=dur*Math.pow(progress,0.55);
+    var startSample=Math.floor(tickTime*sr);
+    var tickSamples=Math.ceil(tickDur*sr);
+    // Higher pitch at start, lower at end (like CS2)
+    var freq=tickFreq*(1-progress*0.3);
+    var vol=0.5+0.3*(1-progress);
+    for(var i=0;i<tickSamples&&(startSample+i)<len;i++){
+      var t=i/sr;
+      var env=vol*(1-i/tickSamples);
+      samples[startSample+i]+=Math.sin(2*Math.PI*freq*t)*env*32767;
+    }
+  }
+  // Clamp
+  for(var i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
+  return buildWav(samples,sr);
+}
+function genResultWav(type){
+  var sr=22050,dur=0.4,notes=[];
+  if(type==='common'){notes=[{f:440,s:0,d:0.15}];dur=0.2;}
+  else if(type==='win'){notes=[{f:523,s:0,d:0.15},{f:659,s:0.12,d:0.15},{f:784,s:0.24,d:0.2}];dur=0.5;}
+  else if(type==='bigwin'){notes=[{f:523,s:0,d:0.15},{f:659,s:0.13,d:0.15},{f:784,s:0.26,d:0.15},{f:1047,s:0.4,d:0.3}];dur=0.75;}
+  else if(type==='prize'){notes=[{f:523,s:0,d:0.2},{f:659,s:0.12,d:0.2},{f:784,s:0.24,d:0.2},{f:1047,s:0.36,d:0.2},{f:1319,s:0.48,d:0.3}];dur=0.85;}
+  var len=Math.ceil(sr*dur),samples=new Float64Array(len);
+  notes.forEach(function(n){
+    var start=Math.floor(n.s*sr),nd=Math.ceil(n.d*sr);
+    for(var i=0;i<nd&&(start+i)<len;i++){
+      var t=i/sr,env=0.6*(1-i/nd);
+      samples[start+i]+=Math.sin(2*Math.PI*n.f*t)*env*32767;
+    }
+  });
+  for(var i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
+  return buildWav(samples,sr);
 }
 function playCaseSound(type){
-  if(type==='tick'){
-    playWav(800,0.04,0.12,'square');
-  } else if(type==='slowtick'){
-    playWav(600,0.06,0.15,'sine');
-  } else if(type==='win'){
-    playWav(523,0.15,0.2,'sine');
-    setTimeout(function(){playWav(659,0.15,0.2,'sine');},120);
-    setTimeout(function(){playWav(784,0.25,0.2,'sine');},240);
-  } else if(type==='bigwin'){
-    playWav(523,0.2,0.25,'sine');
-    setTimeout(function(){playWav(659,0.2,0.25,'sine');},150);
-    setTimeout(function(){playWav(784,0.2,0.25,'sine');},300);
-    setTimeout(function(){playWav(1047,0.35,0.25,'sine');},450);
-  } else if(type==='prize'){
-    [523,659,784,1047,1319].forEach(function(f,i){
-      setTimeout(function(){playWav(f,0.25,0.25,'sine');},i*130);
-    });
-  } else if(type==='common'){
-    playWav(440,0.12,0.15,'sine');
-  } else if(type==='spin'){
-    playWav(220,0.1,0.15,'sawtooth');
-  }
+  try{
+    if(type==='spin'){
+      if(!csSounds.spin)csSounds.spin=genSpinWav();
+      if(csSpinAudio){csSpinAudio.pause();csSpinAudio.currentTime=0;}
+      csSpinAudio=new Audio(csSounds.spin);
+      csSpinAudio.volume=0.4;
+      csSpinAudio.play().catch(function(){});
+    } else if(type==='common'||type==='win'||type==='bigwin'||type==='prize'){
+      if(!csSounds[type])csSounds[type]=genResultWav(type);
+      var a=new Audio(csSounds[type]);
+      a.volume=0.5;
+      a.play().catch(function(){});
+    }
+  }catch(e){}
 }
-// Pre-generate common sounds on load
+// Pre-generate all sounds on page load
 setTimeout(function(){
   try{
-    soundCache['800_0.04_square']=genWav(800,0.04,0.12,'square');
-    soundCache['600_0.06_sine']=genWav(600,0.06,0.15,'sine');
-    soundCache['440_0.12_sine']=genWav(440,0.12,0.15,'sine');
-    soundCache['220_0.1_sawtooth']=genWav(220,0.1,0.15,'sawtooth');
+    csSounds.spin=genSpinWav();
+    csSounds.common=genResultWav('common');
+    csSounds.win=genResultWav('win');
+    csSounds.bigwin=genResultWav('bigwin');
+    csSounds.prize=genResultWav('prize');
   }catch(e){}
-},1000);
+},500);
 
 // ══ CASES ══
 var CASES_DEF = [
@@ -1630,33 +1650,29 @@ function openCase(){
   var randOffset=(Math.random()*20-10);
   var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // Sound: spin start
+  // CS2-style spin sound — single audio with decelerating ticks
   playCaseSound('spin');
 
-  // Phase 1: fast launch + fast ticks
+  // Phase 1: fast launch
   strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
   strip.style.transform='translateX('+(-(22*ITEM_W-centerOffset))+'px)';
-  for(var ti=0;ti<12;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*70);})(ti);}
 
-  // Phase 2: full speed + medium ticks
+  // Phase 2: full speed
   setTimeout(function(){
     strip.style.transition='transform 0.7s linear';
     strip.style.transform='translateX('+(-(36*ITEM_W-centerOffset))+'px)';
-    for(var ti=0;ti<7;ti++){(function(d){setTimeout(function(){playCaseSound('tick');},d*90);})(ti);}
   },950);
 
-  // Phase 3: decelerate + slow ticks
+  // Phase 3: decelerate
   setTimeout(function(){
     strip.style.transition='transform 0.8s cubic-bezier(0.5,0.0,0.9,0.4)';
     strip.style.transform='translateX('+(-(41*ITEM_W-centerOffset))+'px)';
-    for(var ti=0;ti<5;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*150);})(ti);}
   },1700);
 
-  // Phase 4: CS:GO slow crawl + rare ticks
+  // Phase 4: CS:GO slow crawl
   setTimeout(function(){
     strip.style.transition='transform 2.6s cubic-bezier(0.0,0.0,0.05,1.0)';
     strip.style.transform='translateX('+targetX+'px)';
-    for(var ti=0;ti<6;ti++){(function(d){setTimeout(function(){playCaseSound('slowtick');},d*400);})(ti);}
   },2550);
 
   // Show result
