@@ -1269,12 +1269,9 @@ function buildDailyInTasks() {
   if (btn) btn.disabled = claimed;
 }
 
-// ══ CASE SOUNDS (CS2-style — pre-calculated ticks, no getComputedStyle) ══
+// ══ CASE SOUNDS (zero-lag: ONE pre-built WAV for entire spin) ══
 var csSounds={};
-var csTickPool=[];
-var csTickIdx=0;
-var CS_TICK_POOL=5;
-var csTickTimers=[];
+var csSpinAudio=null;
 function buildWav(samples,sr){
   var len=samples.length,buf=new ArrayBuffer(44+len*2),v=new DataView(buf);
   function ws(o,s){for(var i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));}
@@ -1287,18 +1284,33 @@ function buildWav(samples,sr){
   for(var i=0;i<bytes.length;i++)b64+=String.fromCharCode(bytes[i]);
   return 'data:audio/wav;base64,'+btoa(b64);
 }
-function genTickWav(){
-  var sr=44100,dur=0.015,len=Math.ceil(sr*dur),samples=new Float64Array(len);
-  for(var i=0;i<len;i++){
-    var t=i/sr;
-    var env=Math.exp(-t*350)*0.65;
-    var s=Math.sin(2*Math.PI*1100*t)*0.5+Math.sin(2*Math.PI*1800*t)*0.3+Math.sin(2*Math.PI*700*t)*0.2;
-    samples[i]=s*env*32767;
+function genSpinWav(){
+  var sr=22050,dur=5.4,len=Math.ceil(sr*dur),samples=new Float64Array(len);
+  var times=[];
+  var i,p;
+  for(i=0;i<22;i++){p=i/22;times.push(900*(1-Math.pow(1-p,1.8))/1000);}
+  for(i=0;i<14;i++){times.push((950+700*i/14)/1000);}
+  for(i=0;i<5;i++){p=i/5;times.push((1700+800*Math.pow(p,1.6))/1000);}
+  for(i=0;i<4;i++){p=i/4;times.push((2550+2600*(1-Math.pow(1-p,2.5)))/1000);}
+  var tickDur=0.012;
+  for(var tk=0;tk<times.length;tk++){
+    var startSample=Math.floor(times[tk]*sr);
+    var tickSamples=Math.ceil(tickDur*sr);
+    var progress=tk/times.length;
+    var freq=1100*(1-progress*0.25);
+    var vol=0.55+0.25*(1-progress);
+    for(i=0;i<tickSamples&&(startSample+i)<len;i++){
+      var t=i/sr;
+      var env=vol*Math.exp(-t*350);
+      var s=Math.sin(2*Math.PI*freq*t)*0.5+Math.sin(2*Math.PI*freq*1.5*t)*0.3+Math.sin(2*Math.PI*freq*0.5*t)*0.2;
+      samples[startSample+i]+=s*env*32767;
+    }
   }
+  for(i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
   return buildWav(samples,sr);
 }
 function genResultWav(type){
-  var sr=44100,dur=0.4,notes=[],vol=0.5;
+  var sr=22050,dur=0.4,notes=[],vol=0.5;
   if(type==='common'){
     notes=[{f:350,s:0,d:0.18}];dur=0.2;vol=0.4;
   } else if(type==='rare'){
@@ -1322,37 +1334,16 @@ function genResultWav(type){
   for(var i=0;i<len;i++)samples[i]=Math.max(-32767,Math.min(32767,samples[i]));
   return buildWav(samples,sr);
 }
-function playTick(){
+function playSpinSound(){
   try{
-    var a=csTickPool[csTickIdx%CS_TICK_POOL];
-    a.currentTime=0;
-    a.play().catch(function(){});
-    csTickIdx++;
+    if(csSpinAudio){csSpinAudio.pause();csSpinAudio=null;}
+    csSpinAudio=new Audio(csSounds.spin);
+    csSpinAudio.volume=0.35;
+    csSpinAudio.play().catch(function(){});
   }catch(e){}
 }
-function calcTickTimes(){
-  var times=[];
-  // Phase 1 (0-900ms): ease-out, 22 items
-  for(var i=0;i<22;i++){var p=i/22;times.push(Math.round(900*(1-Math.pow(1-p,1.8))));}
-  // Phase 2 (950-1650ms): linear, 14 items
-  for(var i=0;i<14;i++){times.push(950+Math.round(700*i/14));}
-  // Phase 3 (1700-2500ms): ease-in, 5 items
-  for(var i=0;i<5;i++){var p=i/5;times.push(1700+Math.round(800*Math.pow(p,1.6)));}
-  // Phase 4 (2550-5150ms): strong ease-out, 4 items
-  for(var i=0;i<4;i++){var p=i/4;times.push(2550+Math.round(2600*(1-Math.pow(1-p,2.5))));}
-  return times;
-}
-function startTickSchedule(){
-  csTickIdx=0;
-  var times=calcTickTimes();
-  csTickTimers=[];
-  for(var i=0;i<times.length;i++){
-    csTickTimers.push(setTimeout(playTick,times[i]));
-  }
-}
-function stopTickSchedule(){
-  for(var i=0;i<csTickTimers.length;i++)clearTimeout(csTickTimers[i]);
-  csTickTimers=[];
+function stopSpinSound(){
+  try{if(csSpinAudio){csSpinAudio.pause();csSpinAudio=null;}}catch(e){}
 }
 function playCaseSound(type){
   try{
@@ -1363,11 +1354,10 @@ function playCaseSound(type){
     }
   }catch(e){}
 }
-// Pre-generate all sounds + tick pool on page load
+// Pre-generate all sounds on page load (ONE spin WAV + result WAVs)
 setTimeout(function(){
   try{
-    var tickUrl=genTickWav();
-    for(var i=0;i<CS_TICK_POOL;i++){csTickPool[i]=new Audio(tickUrl);csTickPool[i].volume=0.3;}
+    csSounds.spin=genSpinWav();
     csSounds.common=genResultWav('common');
     csSounds.rare=genResultWav('rare');
     csSounds.win=genResultWav('win');
@@ -1673,8 +1663,8 @@ function openCase(){
   var randOffset=(Math.random()*20-10);
   var targetX=-(WIN_IDX*ITEM_W-centerOffset+randOffset);
 
-  // Pre-calculated tick schedule — no getComputedStyle, no lag
-  startTickSchedule();
+  // ONE pre-built audio for entire spin — zero lag
+  playSpinSound();
 
   // Phase 1: fast launch
   strip.style.transition='transform 0.9s cubic-bezier(0.3,0.9,0.6,1.0)';
@@ -1700,7 +1690,7 @@ function openCase(){
 
   // Show result
   setTimeout(function(){
-    stopTickSchedule();
+    stopSpinSound();
     var winEl=strip.children[WIN_IDX];
     if(winEl)winEl.className='strip-item '+result.rarity+' win';
     setTimeout(function(){
