@@ -1460,7 +1460,7 @@ function buildCaseCards(){
   var dl=getDailyLuck();
   var freeLeft=Math.max(0,3-dl.dailyOpens);
   var resetMs=getLuckResetTimeLeft();
-  var luckPct=Math.round(getLuckMultiplier()*100/2.5*100);
+  var luckPct=Math.round(getLuckMultiplier()*100/2.0*100);
   var luckColor=luckPct>=80?'#44ff66':luckPct>=50?'#ffaa00':luckPct>=30?'#ff6644':'#cc2222';
   var luckLabel=luckPct>=80?'ВДАЧА':luckPct>=50?'НОРМ':luckPct>=30?'ПОГАНО':'МІНУС';
   var resetStr='';
@@ -1571,12 +1571,12 @@ function incrementDailyOpens(){
 function getLuckMultiplier(){
   var d=getDailyLuck();
   var cnt=d.dailyOpens;
-  if(cnt<=3)return 2.5;
-  if(cnt<=6)return 1.8;
-  if(cnt<=10)return 1.0;
-  if(cnt<=15)return 0.5;
-  if(cnt<=25)return 0.3;
-  return 0.2;
+  if(cnt<=3)return 2.0;
+  if(cnt<=6)return 1.6;
+  if(cnt<=10)return 1.2;
+  if(cnt<=15)return 1.0;
+  if(cnt<=25)return 0.8;
+  return 0.6;
 }
 function getLuckResetTimeLeft(){
   var d=getDailyLuck();
@@ -1592,9 +1592,9 @@ function rollDrop(cas){
   var luck=getLuckMultiplier();
   var weights=cas.drops.map(function(d){
     if(d.rarity==='common')return d.chance;
-    if(d.rarity==='rare')return d.chance*Math.max(0.1,luck);
-    if(d.rarity==='epic')return d.chance*Math.max(0.05,luck);
-    if(d.rarity==='prize')return d.chance*Math.max(0.02,luck*0.5);
+    if(d.rarity==='rare')return d.chance*Math.max(0.5,luck);
+    if(d.rarity==='epic')return d.chance*Math.max(0.3,luck);
+    if(d.rarity==='prize')return d.chance*Math.max(0.15,luck*0.5);
     return d.chance;
   });
   var total=weights.reduce(function(s,w){return s+w;},0);
